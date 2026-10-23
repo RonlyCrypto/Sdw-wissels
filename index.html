@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b7a3e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>SDW O8-3 Wissels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: club-app band on top, one column of match "quarters" like a coach's clipboard; grid = minute-by-minute strip */
+:root{
+  --bg:#eaf1ec; --surface:#ffffff; --ink:#0f2a1d; --muted:#5b7266; --line:#d3e0d7;
+  --pitch:#0b7a3e; --pitch-deep:#075c2e; --on-pitch:#ffffff;
+  --field:#14904a; --field-soft:#d6efdf; --keeper:#f0b000; --keeper-soft:#fff1c4; --keeper-ink:#5a4000;
+  --red:#d62e2e; --red-soft:#fde3e3; --bench:#e3ebe6;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0a1510; --surface:#11231a; --ink:#e4efe8; --muted:#8fa89a; --line:#22392d;
+  --pitch:#0b6334; --pitch-deep:#084a27; --on-pitch:#ffffff;
+  --field:#2bb565; --field-soft:#173d28; --keeper:#f5c02a; --keeper-soft:#3a3010; --keeper-ink:#ffe08a;
+  --red:#ff5c5c; --red-soft:#3d1717; --bench:#1a2e23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1510; --surface:#11231a; --ink:#e4efe8; --muted:#8fa89a; --line:#22392d;
+  --pitch:#0b6334; --pitch-deep:#084a27; --on-pitch:#ffffff;
+  --field:#2bb565; --field-soft:#173d28; --keeper:#f5c02a; --keeper-soft:#3a3010; --keeper-ink:#ffe08a;
+  --red:#ff5c5c; --red-soft:#3d1717; --bench:#1a2e23; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--pitch)}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--pitch);color:var(--on-pitch)}
+.brand{display:flex;align-items:center;gap:12px;padding-block:14px 10px;max-width:720px;margin:0 auto}
+.crest{width:42px;height:42px;border-radius:50%;background:#fff;color:#c62020;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:17px;flex:none;border:3px solid #c62020}
+.brand h1{margin:0;font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.brand p{margin:2px 0 0;font-size:13px;opacity:.85}
+.tabs{display:flex;background:var(--pitch-deep)}
+.tabs .in{display:flex;max-width:720px;margin:0 auto;width:100%}
+.tabs button{flex:1;background:none;border:0;color:rgba(255,255,255,.7);font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.06em;text-transform:uppercase;padding:12px 4px;border-bottom:3px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:#fff;border-bottom-color:#fff}
+.tabs button:focus-visible{outline:2px solid #fff;outline-offset:-4px}
+main{max-width:720px;margin:0 auto;padding-block:16px 48px}
+section{display:flex;flex-direction:column;gap:14px}
+h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:15px;color:var(--muted);margin:6px 0 0}
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.summary .big{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.05;text-wrap:balance}
+.summary .sub{color:var(--muted);font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:600 15px var(--body);border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--pitch);border-color:var(--pitch);color:#fff}
+.btn.danger{color:var(--red)}
+.btn:focus-visible,.chip-t:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--field);outline-offset:2px}
+.btn.big{font-size:18px;padding:14px 18px;flex:1;justify-content:center}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.q-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.q-title{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.03em}
+.q-title small{font-family:var(--body);font-weight:500;font-size:13px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
+.kchip{background:var(--keeper-soft);color:var(--keeper-ink);border:1px solid var(--keeper);border-radius:999px;padding:3px 10px;font-weight:700;font-size:13px;white-space:nowrap}
+.q-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--field-soft);color:var(--ink);border-radius:8px;padding:4px 9px;font-weight:600;font-size:14px}
+.chip.bench{background:var(--bench);color:var(--muted)}
+.chip.star::after{content:" ★";color:var(--keeper)}
+.ev{display:flex;gap:10px;align-items:flex-start;border-top:1px dashed var(--line);padding-top:10px}
+.ev .t{font-family:var(--display);font-weight:700;font-size:20px;min-width:46px;font-variant-numeric:tabular-nums;color:var(--red);line-height:1.1}
+.ev .sw{display:flex;flex-direction:column;gap:2px;min-width:0}
+.in{color:var(--field);font-weight:700}
+.out{color:var(--red);font-weight:700}
+.pause{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:12px;background:transparent;border:1px dashed var(--muted);color:var(--ink);font-size:14px}
+.pause b.pt{font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-size:15px;white-space:nowrap}
+.gridwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+table.g{border-collapse:separate;border-spacing:0;font-size:13px}
+table.g th,table.g td{padding:0}
+table.g td.n{padding-right:8px;white-space:nowrap;font-weight:600;position:sticky;left:0;background:var(--surface)}
+table.g td.c{width:13px;height:22px}
+table.g td.c i{display:block;height:16px;margin:0 1px;border-radius:3px;background:var(--bench)}
+table.g td.c.f i{background:var(--field)}
+table.g td.c.k i{background:var(--keeper)}
+table.g td.c.bl{border-left:2px solid var(--muted);padding-left:2px}
+table.g td.m{padding-left:8px;font-family:var(--display);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;text-align:right}
+table.g th{font-weight:600;color:var(--muted);font-size:11px;text-align:left;padding-bottom:4px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;background:var(--c)}
+/* live */
+.clock{background:var(--pitch);color:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;overflow:hidden}
+.clock::before{content:"";position:absolute;inset:8px;border:2px solid rgba(255,255,255,.18);border-radius:10px;pointer-events:none}
+.clock::after{content:"";position:absolute;left:50%;top:8px;bottom:8px;border-left:2px solid rgba(255,255,255,.18)}
+.clock .phase{font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:16px;opacity:.9;position:relative;z-index:1;background:var(--pitch);padding:0 8px}
+.clock .time{font-family:var(--display);font-weight:800;font-size:76px;line-height:1;font-variant-numeric:tabular-nums;position:relative;z-index:1;background:var(--pitch);padding:0 10px}
+.clock .bar{width:100%;max-width:340px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);position:relative;z-index:1;margin-top:6px;display:flex;gap:3px;background:none}
+.clock .bar span{flex:1;background:rgba(255,255,255,.22);border-radius:3px;overflow:hidden}
+.clock .bar span i{display:block;height:100%;background:#fff;width:0}
+.alert{border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;border:2px solid var(--red);background:var(--red-soft)}
+.alert .h{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.03em;color:var(--red)}
+.alert.calm{border-color:var(--line);background:var(--surface)}
+.alert.calm .h{color:var(--ink);font-size:18px}
+.alert.keep{border-color:var(--keeper);background:var(--keeper-soft)}
+.alert.keep .h{color:var(--keeper-ink)}
+.swline{font-size:18px;font-weight:600}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl .small{flex:none}
+/* team */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.pl{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center;padding-block:4px;border-bottom:1px solid var(--line)}
+.pl:last-child{border-bottom:0}
+.pl input[type=text]{width:100%;min-width:0;font:500 15px var(--body);border:1px solid transparent;background:transparent;color:var(--ink);padding:6px 4px;border-radius:8px}
+.pl input[type=text]:hover{border-color:var(--line)}
+.chip-t{font:600 12px var(--body);border-radius:999px;border:1px solid var(--line);background:var(--bench);color:var(--muted);padding:5px 9px;cursor:pointer;white-space:nowrap}
+.chip-t[aria-pressed="true"]{background:var(--field-soft);color:var(--ink);border-color:var(--field)}
+.chip-t.kp[aria-pressed="true"]{background:var(--keeper-soft);color:var(--keeper-ink);border-color:var(--keeper)}
+.x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+select,input.txt{font:500 15px var(--body);padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--surface);color:var(--ink);font:600 14px var(--body);padding:9px 6px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--pitch);color:#fff}
+.note{font-size:13px;color:var(--muted)}
+.warn{font-size:14px;color:var(--red);font-weight:600}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+.blk{display:flex;flex-direction:column;gap:8px;padding-block:10px;border-top:1px dashed var(--line)}
+.blk:first-child{border-top:0;padding-top:0}
+.blk-h{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.blk-h input{width:24px;height:24px;margin:2px 0 0;accent-color:var(--field);flex:none}
+.blk-h .t{font-family:var(--display);font-weight:700;font-size:20px;min-width:44px;font-variant-numeric:tabular-nums;color:var(--red);line-height:1.1}
+.blk-h .what{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.tick{background:var(--field-soft);color:var(--field);font-weight:700;font-size:12px;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.blk.is-done .what,.blk.is-done .blk-b,.blk.is-done .t{opacity:.5}
+.blk.is-done .what b{text-decoration:line-through}
+.blk-b{display:flex;flex-direction:column;gap:6px;padding-left:34px}
+table.g td.c{width:30px}
+.sync{font:700 12px var(--body);padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.15);white-space:nowrap}
+.sync[data-st="live"]{background:#fff;color:var(--pitch)}
+.code{font:700 22px var(--display);letter-spacing:.06em;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 12px;user-select:all;-webkit-user-select:all;overflow-wrap:anywhere}
+.code.small{font:500 14px var(--body);letter-spacing:0}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="pad"><div class="brand">
+    <div class="crest">SDW</div>
+    <div style="flex:1;min-width:0"><h1>Wisselschema O8-3</h1><p id="hsub">4 × 10 minuten · wissel elke 5 min</p></div><span id="sync" class="sync" data-st="wait">○ …</span>
+  </div></div>
+  <nav class="tabs" role="tablist"><div class="in pad">
+    <button role="tab" id="t-plan" aria-selected="true" data-v="plan">Indeling</button>
+    <button role="tab" id="t-live" aria-selected="false" data-v="live">Wedstrijd</button>
+    <button role="tab" id="t-team" aria-selected="false" data-v="team">Team</button>
+  </div></nav>
+</header>
+
+<main class="pad">
+  <section id="v-plan"></section>
+  <section id="v-live" hidden></section>
+  <section id="v-team" hidden></section>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const DEFAULT_PLAYERS=["Mees Affourtit","Mick Blazer","Seger Fijnekam","Natneal Gabrial","Nayairo Quinn Hooten","Bob van der Leest","James Mehovic","Yassine Srour","Nijs Weeda"];
+const KEY="sdw-o8-3-wissels-v3", OLDKEY="sdw-o8-3-wissels-v2";
+const U=5, N=8, QU=2, Q=4, MATCH=N*U;           // 8 blokken van 5 min, keeper per kwart van 10 min
+const PAUSES=["Korte pauze","Lange pauze","Korte pauze"];
+const UMS=U*60000, QMS=QU*UMS, END=MATCH*60000;
+let S, view="plan";
+
+function defaults(){
+  return {players:DEFAULT_PLAYERS.map((n,i)=>({id:"p"+(i+1),name:n,present:true,canKeep:true})),
+    pair:["p5","p8"],fieldSize:6,keeperPick:[null,null,null,null],plan:null,done:[],
+    live:{elapsed:0,startedAt:null,stopAt:null},nextId:10};
+}
+function load(){
+  try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(defaults(),JSON.parse(r));return}}catch(e){}
+  S=defaults();
+  try{const o=JSON.parse(localStorage.getItem(OLDKEY)||"null");if(o&&o.players){S.players=o.players;S.pair=o.pair||S.pair;S.fieldSize=o.fieldSize||6;S.nextId=o.nextId||S.nextId;S.keeperPick=o.keeperPick||S.keeperPick}}catch(e){}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}schedulePush()}
+
+/* ---------- meekijken: gedeelde stand via Supabase ---------- */
+const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
+const SHARED=["players","pair","fieldSize","keeperPick","plan","done","live","nextId"];
+let serverOffset=0, lastRemote=null, pushTimer=null, pushing=false, dirty=false, syncState="…", applying=false;
+const nowMs=()=>Date.now()+serverOffset;
+function teamCode(){let c=null;try{c=localStorage.getItem(KEY+"-team")}catch(e){}
+  if(!c){const a="abcdefghjkmnpqrstuvwxyz23456789";c="sdw-";for(let i=0;i<8;i++)c+=a[rnd(a.length)];setTeamCode(c)}return c}
+function setTeamCode(c){try{localStorage.setItem(KEY+"-team",c)}catch(e){}SYNC_CODE=c}
+let SYNC_CODE=null;
+async function rpc(fn,body){const t0=Date.now();
+  const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:{"apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error("HTTP "+r.status);const j=await r.json();
+  if(j&&j.now){const rtt=Date.now()-t0;serverOffset=Date.parse(j.now)+rtt/2-Date.now()}return j}
+function sharedState(){const o={};SHARED.forEach(k=>o[k]=S[k]);return o}
+function setSync(st){syncState=st;const el=$("#sync");if(el){el.textContent=st==="live"?"● Live":st==="off"?"○ Offline":"○ …";el.dataset.st=st}}
+function schedulePush(){if(applying||!SYNC_CODE)return;dirty=true;clearTimeout(pushTimer);pushTimer=setTimeout(push,400)}
+async function push(){if(pushing){pushTimer=setTimeout(push,400);return}pushing=true;dirty=false;
+  try{const j=await rpc("save_team",{p_code:SYNC_CODE,p_state:sharedState()});lastRemote=j.updated_at;setSync("live")}
+  catch(e){dirty=true;setSync("off")}finally{pushing=false}}
+async function pull(force){if(!SYNC_CODE||pushing||(dirty&&!force))return;
+  try{const j=await rpc("get_team",{p_code:SYNC_CODE});setSync("live");
+    if(!j.state){if(force!=="join")push();return}
+    if(j.updated_at===lastRemote)return;
+    if(dirty&&!force)return;
+    lastRemote=j.updated_at;applying=true;
+    SHARED.forEach(k=>{if(k in j.state)S[k]=j.state[k]});
+    try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+    applying=false;lastMs=matchMs();
+    const ae=document.activeElement;if(!(view==="team"&&ae&&ae.tagName==="INPUT"))show(view,true);
+  }catch(e){setSync("off")}}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rnd=n=>Math.floor(Math.random()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),1800)}
+
+function nameOf(id){
+  const p=S.players.find(x=>x.id===id); if(!p) return "?";
+  const parts=p.name.trim().split(/\s+/); let f=parts[0]||"?"; f=f[0].toUpperCase()+f.slice(1);
+  const dup=S.players.some(o=>o.id!==id&&(o.name.trim().split(/\s+/)[0]||"").toLowerCase()===f.toLowerCase());
+  return dup&&parts.length>1? f+" "+parts[parts.length-1][0].toUpperCase()+"." : f;
+}
+const isStar=id=>S.pair.includes(id);
+const clock=min=>min+":00";
+
+/* ---------- planner: 8 blokken van 5 minuten ---------- */
+function evalCost(on,n,pa,pb,kIdx){
+  let c=0,tot=0;const m=new Array(n).fill(0);
+  for(let p=0;p<n;p++){for(let u=0;u<N;u++)if(on[p*N+u])m[p]++;tot+=m[p]}
+  const avg=tot/n;for(let p=0;p<n;p++)c+=100*(m[p]-avg)**2;
+  if(pa>=0&&pb>=0)for(let u=0;u<N;u++){const k=kIdx[Math.floor(u/QU)];
+    if(!on[pa*N+u]&&!on[pb*N+u])c+=1000;
+    if(k===pa&&on[pb*N+u]!==1)c+=1000; if(k===pb&&on[pa*N+u]!==1)c+=1000;
+    if(on[pa*N+u]&&on[pb*N+u])c+=(N-1-u)*15}  // samen erin: liefst aan het eind
+  for(let u=1;u<N;u++)for(let p=0;p<n;p++)if((on[p*N+u]>0)!==(on[p*N+u-1]>0))c+=3;
+  for(let p=0;p<n;p++){let run=0;for(let u=0;u<=N;u++){if(u<N&&!on[p*N+u]){run++;continue}if(run>1)c+=(run-1)*25;run=0}}
+  return c;
+}
+function solve(n,kIdx,F,pa,pb){
+  let best=null,bestCost=Infinity;const on=new Uint8Array(n*N);
+  for(let r=0;r<5;r++){
+    on.fill(0);
+    for(let u=0;u<N;u++){const k=kIdx[Math.floor(u/QU)];on[k*N+u]=2;
+      for(const p of shuffle([...Array(n).keys()].filter(p=>p!==k)).slice(0,F))on[p*N+u]=1}
+    let cost=evalCost(on,n,pa,pb,kIdx);
+    const I=15000;
+    for(let i=0;i<I;i++){
+      const temp=100*Math.pow(0.0005,i/I),u=rnd(N),k=kIdx[Math.floor(u/QU)],A=[],B=[];
+      for(let p=0;p<n;p++){if(p===k)continue;if(on[p*N+u])A.push(p);else B.push(p)}
+      if(!A.length||!B.length)continue;
+      const p=A[rnd(A.length)],q=B[rnd(B.length)];on[p*N+u]=0;on[q*N+u]=1;
+      const c=evalCost(on,n,pa,pb,kIdx);
+      if(c<=cost||Math.random()<Math.exp((cost-c)/temp)){cost=c;if(c<bestCost){bestCost=c;best=on.slice()}}
+      else{on[p*N+u]=1;on[q*N+u]=0}
+    }
+    if(!best){best=on.slice();bestCost=cost}
+  }
+  return best;
+}
+function generate(){
+  const present=S.players.filter(p=>p.present);
+  if(present.length<2){S.plan=null;save();return}
+  const ids=present.map(p=>p.id),n=ids.length;
+  const fs=Math.min(S.fieldSize,n),F=fs-1;
+  const elig=present.filter(p=>p.canKeep);const pool=(elig.length?elig:present).map(p=>p.id);
+  const keepers=[0,1,2,3].map(b=>{const k=S.keeperPick[b];return k&&ids.includes(k)?k:null});
+  const used={};keepers.forEach(k=>{if(k)used[k]=(used[k]||0)+1});
+  const order=shuffle(pool.slice());
+  for(let b=0;b<Q;b++)if(!keepers[b]){
+    let pick=null,bestU=1e9;
+    for(const id of order){const u=(used[id]||0)+(b<Q-1&&S.pair.includes(id)?10:0);if(u<bestU&&id!==keepers[b-1]&&id!==keepers[b+1]){bestU=u;pick=id}}
+    if(!pick)pick=order[0];keepers[b]=pick;used[pick]=(used[pick]||0)+1}
+  const kIdx=keepers.map(k=>ids.indexOf(k));
+  const ok=S.pair[0]!==S.pair[1];
+  const on=solve(n,kIdx,F,ok?ids.indexOf(S.pair[0]):-1,ok?ids.indexOf(S.pair[1]):-1);
+  const grid=ids.map((_,p)=>Array.from({length:N},(_,u)=>on[p*N+u]));
+  S.plan={ids,keepers,grid,fs,v:3};S.done=[];save();
+}
+function planValid(){
+  const P=S.plan;if(!P||P.v!==3)return false;
+  const ids=S.players.filter(p=>p.present).map(p=>p.id);
+  return P.ids.length===ids.length&&P.ids.every((x,i)=>x===ids[i])&&P.fs===Math.min(S.fieldSize,ids.length)
+    &&S.keeperPick.every((k,b)=>!k||!ids.includes(k)||P.keepers[b]===k);
+}
+const P=()=>S.plan;
+function fieldAt(u){const p=P();return p.ids.filter((_,i)=>p.grid[i][u]===1)}
+function benchAt(u){const p=P();return p.ids.filter((_,i)=>p.grid[i][u]===0)}
+function changesAt(u){const p=P(),ins=[],outs=[];
+  p.ids.forEach((id,i)=>{const a=p.grid[i][u-1]>0,b=p.grid[i][u]>0;if(!a&&b)ins.push(id);if(a&&!b)outs.push(id)});
+  return {ins,outs}}
+function minutes(){const p=P();return p.ids.map((id,i)=>({id,m:p.grid[i].filter(v=>v>0).length*U}))}
+const isBreak=u=>u>0&&u%QU===0;
+const keeperAt=u=>P().keepers[Math.floor(u/QU)];
+
+/* ---------- render: plan ---------- */
+const chip=(id,cls="")=>`<span class="chip ${cls}${isStar(id)?" star":""}">${esc(nameOf(id))}</span>`;
+const names=a=>a.map(nameOf).map(esc).join(", ");
+function setDone(u,v){S.done[u]=v;save()}
+function renderPlan(){
+  const el=$("#v-plan");
+  const present=S.players.filter(x=>x.present);
+  const kOpts=b=>`<option value="">Automatisch</option>`+present.map(x=>`<option value="${x.id}"${S.keeperPick[b]===x.id?" selected":""}>${esc(nameOf(x.id))}</option>`).join("");
+  const dupK=S.keeperPick.filter(Boolean).length!==new Set(S.keeperPick.filter(Boolean)).size;
+  const pending=!planValid();
+  let h=`<div class="card"><div class="q-title">Wie is er?</div>
+    <div class="chips">${S.players.map(x=>`<button type="button" class="chip-t" data-pq="${x.id}" aria-pressed="${x.present}">${x.present?"✓ ":"✗ "}${esc(nameOf(x.id))}</button>`).join("")}</div>
+    <div class="note">Tik op een naam om iemand op afwezig te zetten. ${present.length} van ${S.players.length} aanwezig.</div>
+    <div class="q-title">Keepers kiezen</div>
+    <div class="two">${[0,1,2,3].map(b=>`<div class="field"><label for="kq${b}">Kwart ${b+1} · ${b*10}–${b*10+10} min</label><select id="kq${b}" data-kq="${b}">${kOpts(b)}</select></div>`).join("")}</div>
+    ${dupK?`<div class="note">Eén kind keept meer dan één kwart. Dat mag, de speeltijd wordt dan anders verdeeld.</div>`:""}
+    <button class="btn big primary" id="calc" type="button">▶ Start: bereken indeling</button>
+    ${pending?`<div class="warn">Aangepast. Druk op Start om de indeling opnieuw te berekenen.</div>`:""}
+  </div>`;
+  if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."}</div></div>`;bindPlan(el);return}
+  const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
+  let viol=0;if(S.pair[0]!==S.pair[1])for(let u=0;u<N;u++){const b=benchAt(u),k=keeperAt(u),[a,c]=S.pair;
+    if((b.includes(a)&&b.includes(c))||(k===a&&b.includes(c))||(k===c&&b.includes(a)))viol++}
+  const subsTotal=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length).length;
+  const doneCount=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length&&S.done[u]).length;
+  h+=`<div class="summary">
+    <div class="big">${mx===mn?`Iedereen speelt ${mx} minuten`:`Iedereen speelt ${mn}–${mx} minuten`}</div>
+    <div class="sub">${p.ids.length} spelers · ${p.fs} op het veld · 4 × 10 min · wissel elke 5 min${S.pair[0]!==S.pair[1]?` · ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} nooit samen op de bank, samen erin vooral aan het eind`:""}</div>
+    ${mx!==mn?`<div class="note">Met ${p.ids.length} spelers kan het niet precies gelijk. Met “Andere indeling” krijgen andere kinderen de extra 5 minuten.</div>`:""}
+    ${viol?`<div class="warn">Let op: in ${viol} blok(ken) lukt de regel voor ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} niet.</div>`:""}
+    <div class="sub"><b>${doneCount} van ${subsTotal}</b> wissels gedaan</div>
+    <div class="row"><button class="btn primary" id="regen" type="button">↻ Andere indeling</button><button class="btn" id="copy" type="button">Kopieer voor WhatsApp</button>${doneCount?`<button class="btn" id="undone" type="button">Vinkjes wissen</button>`:""}</div>
+  </div>`;
+  for(let q=0;q<Q;q++){
+    h+=`<article class="q"><div class="q-head"><div class="q-title">Kwart ${q+1}<small>${q*10}–${q*10+10} min</small></div><span class="kchip">🧤 ${esc(nameOf(p.keepers[q]))}</span></div><div class="q-body">`;
+    for(let k=0;k<QU;k++){const u=q*QU+k,t0=u*U;
+      if(u===0){h+=`<div class="blk"><div class="blk-h"><span class="t">0:00</span><b>Aftrap</b></div>`}
+      else{const c=changesAt(u),d=!!S.done[u];
+        const what=isBreak(u)?`${PAUSES[q-1]} · keeper wordt ${esc(nameOf(p.keepers[q]))}`:`Wissel om ${clock(t0)}`;
+        h+=`<div class="blk${d?" is-done":""}"><label class="blk-h" for="dn${u}">
+          <input type="checkbox" id="dn${u}" data-done="${u}"${d?" checked":""}${c.ins.length||isBreak(u)?"":" disabled"}>
+          <span class="t">${clock(t0)}</span><span class="what"><b>${what}</b>${c.ins.length?`<span class="in">↑ ${names(c.ins)}</span><span class="out">↓ ${names(c.outs)}</span>`:`<span class="note">Geen wissel</span>`}</span>
+          ${d?`<span class="tick">Gedaan</span>`:""}</label>`}
+      h+=`<div class="blk-b"><div class="lbl">Veld ${t0}–${t0+U} min</div><div class="chips">${fieldAt(u).map(id=>chip(id)).join("")}</div>
+        <div class="lbl">Bank</div><div class="chips">${benchAt(u).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></div>`;
+    }
+    h+=`</div></article>`;
+  }
+  h+=`<h2>Speeltijd per blok van 5 minuten</h2><div class="gridwrap"><table class="g"><thead><tr><th></th>${Array.from({length:N},(_,u)=>`<th>${u*U}</th>`).join("")}<th style="text-align:right">min</th></tr></thead><tbody>`;
+  p.ids.forEach((id,i)=>{h+=`<tr><td class="n">${esc(nameOf(id))}${isStar(id)?" ★":""}</td>${p.grid[i].map((v,u)=>`<td class="c ${v===2?"k":v?"f":""}${isBreak(u)?" bl":""}"><i></i></td>`).join("")}<td class="m">${mins[i].m}</td></tr>`});
+  h+=`</tbody></table><div class="legend"><span style="--c:var(--field)">Veld</span><span style="--c:var(--keeper)">Keeper</span><span style="--c:var(--bench)">Bank</span></div></div>`;
+  el.innerHTML=h;bindPlan(el);
+  $("#regen").onclick=()=>{generate();renderPlan();toast("Nieuwe indeling gemaakt")};
+  $("#copy").onclick=copyPlan;
+  const ud=$("#undone");if(ud)ud.onclick=()=>{S.done=[];save();renderPlan()};
+  el.querySelectorAll("[data-done]").forEach(x=>x.onchange=()=>{setDone(+x.dataset.done,x.checked);renderPlan()});
+}
+function bindPlan(el){
+  el.querySelectorAll("[data-kq]").forEach(x=>x.onchange=()=>{S.keeperPick[+x.dataset.kq]=x.value||null;save();renderPlan()});
+  el.querySelectorAll("[data-pq]").forEach(x=>x.onclick=()=>{const pl=S.players.find(y=>y.id===x.dataset.pq);pl.present=!pl.present;
+    if(!pl.present)S.keeperPick=S.keeperPick.map(k=>k===pl.id?null:k);save();renderPlan()});
+  $("#calc").onclick=()=>{generate();renderPlan();toast("Indeling berekend");const s=$(".summary");s&&s.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})};
+}
+function planText(){
+  const p=P();let s="⚽ SDW O8-3 wisselschema (4 × 10 min)\n";
+  for(let q=0;q<Q;q++){s+=`\nKwart ${q+1} (${q*10}-${q*10+10} min) · keeper ${nameOf(p.keepers[q])}\n`;
+    for(let k=0;k<QU;k++){const u=q*QU+k;
+      if(u>0){const c=changesAt(u);s+=`${clock(u*U)} ${isBreak(u)?PAUSES[q-1].toLowerCase()+": ":""}${c.ins.length?`erin ${c.ins.map(nameOf).join(", ")} / eruit ${c.outs.map(nameOf).join(", ")}`:"geen wissel"}\n`}
+      s+=`  Veld ${u*U}-${u*U+U}: ${fieldAt(u).map(nameOf).join(", ")}\n`}}
+  s+="\nSpeeltijd: "+minutes().map(x=>`${nameOf(x.id)} ${x.m}`).join(", ");
+  return s;
+}
+function copyPlan(){const txt=planText();
+  try{navigator.clipboard.writeText(txt).then(()=>toast("Gekopieerd"),()=>fallbackCopy(txt))}catch(e){fallbackCopy(txt)}}
+function fallbackCopy(txt){const ta=document.createElement("textarea");ta.value=txt;ta.className="txt";ta.style.cssText="width:100%;height:200px";
+  $(".summary").appendChild(ta);ta.focus();ta.select();toast("Selecteer en kopieer de tekst")}
+
+/* ---------- live ---------- */
+let audio=null,lastMs=0,flashUntil=0,flashU=null,resetArm=false,wake=null;
+function beep(freq=880,dur=.18,times=1){if(!audio)return;try{for(let i=0;i<times;i++){const o=audio.createOscillator(),g=audio.createGain();
+  o.frequency.value=freq;o.connect(g);g.connect(audio.destination);const st=audio.currentTime+i*(dur+.08);
+  g.gain.setValueAtTime(.25,st);g.gain.exponentialRampToValueAtTime(.001,st+dur);o.start(st);o.stop(st+dur)}}catch(e){}}
+function matchMs(){const L=S.live;return Math.min(END,L.elapsed+(L.startedAt?nowMs()-L.startedAt:0))}
+function fmt(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function startClock(){
+  try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume&&audio.resume()}catch(e){}
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}
+  const L=S.live;if(L.startedAt||L.elapsed>=END)return;
+  // starting after a break counts as that break's wissel being done
+  if(L.elapsed>0&&L.elapsed%QMS===0){const u=L.elapsed/UMS;if(changesAt(u).ins.length||isBreak(u))S.done[u]=true}
+  L.stopAt=(Math.floor(L.elapsed/QMS)+1)*QMS;L.startedAt=nowMs();save();renderLive()}
+function pauseClock(){const L=S.live;if(!L.startedAt)return;L.elapsed=matchMs();L.startedAt=null;save();renderLive()}
+function adjust(d){const L=S.live;const ms=Math.max(0,Math.min(END,matchMs()+d));
+  if(L.startedAt){L.elapsed=ms;L.startedAt=nowMs();L.stopAt=(Math.floor(ms/QMS)+1)*QMS}else L.elapsed=ms;lastMs=ms;save();renderLive()}
+function resetClock(){S.live={elapsed:0,startedAt:null,stopAt:null};lastMs=0;flashUntil=0;save();renderLive()}
+function renderLive(){
+  const el=$("#v-live");if(!P()||P().v!==3){el.innerHTML=`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">Druk eerst op Start bij Indeling.</div></div>`;return}
+  const L=S.live,ms=matchMs(),running=!!L.startedAt,ended=ms>=END;
+  const atBreak=!running&&ms>0&&ms%QMS===0&&!ended;
+  const q=ended?Q-1:atBreak?ms/QMS:Math.min(Q-1,Math.floor(ms/QMS));
+  const uNow=ended?N-1:atBreak?ms/UMS:Math.min(N-1,Math.floor(ms/UMS));
+  const phase=ended?"Afgelopen":atBreak?PAUSES[q-1]:(ms===0?"Klaar voor de aftrap":`Kwart ${q+1}`+(running?"":" · gepauzeerd"));
+  let h=`<div class="clock"><div class="phase">${phase}</div><div class="time" id="ltime">${fmt(ms)}</div>
+    <div class="bar">${[0,1,2,3].map(b=>`<span><i style="width:${Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))}%"></i></span>`).join("")}</div></div>`;
+  h+=`<div class="ctrl">${ended?"":running?`<button class="btn big" id="lpause" type="button">❚❚ Pauze</button>`
+    :`<button class="btn big primary" id="lstart" type="button">▶ ${ms===0?"Start wedstrijd":atBreak?`Start kwart ${q+1}`:"Verder"}</button>`}</div>`;
+  const doneBtn=u=>S.done[u]?`<span class="tick">✓ Gedaan</span>`:`<button class="btn" type="button" data-ldone="${u}">✓ Wissel gedaan</button>`;
+  if(Date.now()<flashUntil&&flashU!=null){const c=changesAt(flashU);
+    h+=`<div class="alert"><div class="h">Wissel nu!</div><div class="swline"><span class="in">↑ ${names(c.ins)}</span></div><div class="swline"><span class="out">↓ ${names(c.outs)}</span></div><div>${doneBtn(flashU)}</div></div>`}
+  else if(atBreak){const u=ms/UMS,c=changesAt(u);
+    h+=`<div class="alert keep"><div class="h">🧤 Keeper: ${esc(nameOf(P().keepers[q]))}</div>${c.ins.length?`<div class="swline"><span class="in">↑ ${names(c.ins)}</span></div><div class="swline"><span class="out">↓ ${names(c.outs)}</span></div>`:`<div>Verder geen wissels.</div>`}<div>${doneBtn(u)}</div></div>`}
+  else if(!ended){
+    const prevU=uNow; // wissel aan het begin van dit blok, nog niet afgevinkt?
+    if(prevU>0&&!isBreak(prevU)&&changesAt(prevU).ins.length&&!S.done[prevU]){const c=changesAt(prevU);
+      h+=`<div class="alert"><div class="h">Wissel van ${clock(prevU*U)} nog niet afgevinkt</div><div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div><div>${doneBtn(prevU)}</div></div>`}
+    const nx=uNow+1;
+    if(nx<N&&!isBreak(nx)){const c=changesAt(nx);
+      h+=`<div class="alert calm"><div class="h">Volgende wissel om ${clock(nx*U)} · nog <span id="lcd">${fmt(nx*UMS-ms)}</span></div>${c.ins.length?`<div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div>`:`<div>Geen wissel nodig.</div>`}</div>`}
+    else if(q<Q-1)h+=`<div class="alert calm"><div class="h">Pauze om ${clock((q+1)*10)} · nog <span id="lcd">${fmt((q+1)*QMS-ms)}</span></div><div>Daarna wordt ${esc(nameOf(P().keepers[q+1]))} keeper.</div></div>`;
+  }
+  const showU=uNow;
+  h+=`<article class="q"><div class="q-head"><div class="q-title">${atBreak?"Na de pauze":"Nu in het veld"}</div><span class="kchip">🧤 ${esc(nameOf(keeperAt(showU)))}</span></div><div class="q-body">
+    <div class="chips">${fieldAt(showU).map(id=>chip(id)).join("")}</div>
+    <div class="lbl">Bank</div><div class="chips">${benchAt(showU).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></article>`;
+  h+=`<div class="ctrl"><button class="btn small" id="lm" type="button">−10 s</button><button class="btn small" id="lp" type="button">+10 s</button><button class="btn small danger" id="lr" type="button">${resetArm?"Tik nogmaals om te resetten":"Reset"}</button></div>
+    <p class="note">De klok stopt vanzelf na elke 10 minuten. Elke 5 minuten piept je telefoon voor de wissel (geluid aan). Met −10 s en +10 s zet je de klok gelijk met de scheidsrechter.</p>`;
+  el.innerHTML=h;
+  const b=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  b("#lstart",startClock);b("#lpause",pauseClock);b("#lm",()=>adjust(-10000));b("#lp",()=>adjust(10000));
+  el.querySelectorAll("[data-ldone]").forEach(x=>x.onclick=()=>{setDone(+x.dataset.ldone,true);flashUntil=0;flashU=null;renderLive();toast("Afgevinkt")});
+  b("#lr",()=>{if(resetArm){resetArm=false;resetClock()}else{resetArm=true;renderLive();setTimeout(()=>{if(resetArm){resetArm=false;if(view==="live")renderLive()}},3000)}});
+}
+function tick(){
+  const L=S.live;if(!P()||P().v!==3)return;
+  if(L.startedAt){let ms=matchMs();
+    if(L.stopAt&&ms>=L.stopAt){L.elapsed=L.stopAt;L.startedAt=null;save();ms=L.elapsed;beep(660,.35,3);
+      if(wake){try{wake.release()}catch(e){}wake=null}}
+    for(let u=1;u<N;u++){if(isBreak(u))continue;const at=u*UMS;if(!changesAt(u).ins.length)continue;
+      if(lastMs<at-15000&&ms>=at-15000&&ms<at)beep(988,.12,1);
+      if(lastMs<at&&ms>=at){flashU=u;flashUntil=Date.now()+60000;beep(1046,.2,2)}}
+    const prevBlk=Math.floor(lastMs/UMS);lastMs=ms;
+    if(view==="live"){
+      if(!L.startedAt||Math.floor(ms/UMS)!==prevBlk||(flashU!=null&&Date.now()>=flashUntil)){if(Date.now()>=flashUntil)flashU=null;renderLive()}
+      else{$("#ltime").textContent=fmt(ms);const cd=$("#lcd");
+        if(cd){const u=Math.floor(ms/UMS)+1;cd.textContent=fmt(Math.min(u*UMS,(Math.floor(ms/QMS)+1)*QMS)-ms)}
+        document.querySelectorAll(".clock .bar i").forEach((i,b)=>i.style.width=Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))+"%")}}
+  }else lastMs=matchMs();
+}
+
+/* ---------- team ---------- */
+function changed(){save();renderTeam()}
+function renderTeam(){
+  const el=$("#v-team"),pl=S.players;
+  const opts=sel=>pl.map(p=>`<option value="${p.id}"${p.id===sel?" selected":""}>${esc(p.name)}</option>`).join("");
+  let h=`<h2>Spelers (${pl.filter(p=>p.present).length} aanwezig)</h2><div class="card">${pl.map(p=>`<div class="pl">
+      <input type="text" id="nm-${p.id}" value="${esc(p.name)}" data-id="${p.id}" aria-label="Naam">
+      <button type="button" class="chip-t" data-pres="${p.id}" aria-pressed="${p.present}">${p.present?"Aanwezig":"Afwezig"}</button>
+      <button type="button" class="chip-t kp" data-kp="${p.id}" aria-pressed="${p.canKeep}">🧤 Keept</button>
+      <button type="button" class="x" data-del="${p.id}" aria-label="Verwijder ${esc(p.name)}">×</button></div>`).join("")}
+    <form id="addf" class="row"><input class="txt" id="addn" placeholder="Naam nieuwe speler" style="flex:1;min-width:0"><button class="btn" type="submit">Toevoegen</button></form>
+    <p class="note">Zet 🧤 uit voor kinderen die niet willen keepen. Na een wijziging druk je bij Indeling op Start.</p></div>
+  <h2>Meekijken op een andere telefoon</h2><div class="card">
+    <div class="field"><label>Teamcode</label><div class="code" id="tcode">${esc(SYNC_CODE)}</div></div>
+    <div class="field"><label>Link om te delen</label><div class="code small" id="tlink">${esc(shareLink())}</div></div>
+    <div class="row"><button class="btn primary" type="button" id="cplink">Kopieer link</button><button class="btn" type="button" id="cpcode">Kopieer code</button></div>
+    <p class="note">Stuur de link naar de andere ouder of trainer. Wie de link opent of de code invult, ziet dezelfde indeling, klok en vinkjes. Iedereen met de code kan ook dingen aanpassen.</p>
+    <form id="joinf" class="row"><input class="txt" id="joinc" placeholder="Code van een ander invullen" autocapitalize="off" style="flex:1;min-width:0"><button class="btn" type="submit">Meekijken</button></form>
+  </div>
+  <h2>Nooit samen op de bank</h2><div class="card"><div class="two">
+    <div class="field"><label for="pa">Speler 1</label><select id="pa">${opts(S.pair[0])}</select></div>
+    <div class="field"><label for="pb">Speler 2</label><select id="pb">${opts(S.pair[1])}</select></div></div>
+    <p class="note">Samen op de bank mag niet. Samen in het veld gebeurt zoveel mogelijk aan het eind van de wedstrijd. Keept de een, dan speelt de ander dat kwart in het veld.</p></div>
+  <h2>Wedstrijd</h2><div class="card">
+    <div class="field"><label>Spelers in het veld (met keeper)</label><div class="seg">${[5,6,7,8].map(n=>`<button type="button" data-fs="${n}" aria-pressed="${S.fieldSize===n}">${n}</button>`).join("")}</div></div>
+    <p class="note">4 kwarten van 10 minuten. Keeper wisselt in de pauze, spelers wisselen elke 5 minuten.</p></div>`;
+  el.innerHTML=h;
+  const cp=(txt)=>{try{navigator.clipboard.writeText(txt).then(()=>toast("Gekopieerd"),()=>toast("Houd de tekst ingedrukt om te kopiëren"))}catch(e){toast("Houd de tekst ingedrukt om te kopiëren")}};
+  $("#cplink").onclick=()=>cp(shareLink());$("#cpcode").onclick=()=>cp(SYNC_CODE);
+  $("#joinf").onsubmit=e=>{e.preventDefault();const c=parseCode($("#joinc").value);if(!c){toast("Die code klopt niet");return}joinTeam(c)};
+  el.querySelectorAll("input[data-id]").forEach(i=>i.onchange=()=>{const p=pl.find(x=>x.id===i.dataset.id);const v=i.value.trim();if(v){p.name=v;save();renderTeam()}else i.value=p.name});
+  el.querySelectorAll("[data-pres]").forEach(x=>x.onclick=()=>{const p=pl.find(y=>y.id===x.dataset.pres);p.present=!p.present;if(!p.present)S.keeperPick=S.keeperPick.map(k=>k===p.id?null:k);changed()});
+  el.querySelectorAll("[data-kp]").forEach(x=>x.onclick=()=>{const p=pl.find(y=>y.id===x.dataset.kp);p.canKeep=!p.canKeep;changed()});
+  el.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{const id=x.dataset.del;if(x.dataset.arm){S.players=pl.filter(p=>p.id!==id);S.keeperPick=S.keeperPick.map(k=>k===id?null:k);changed()}else{x.dataset.arm="1";x.textContent="Zeker?";x.style.fontSize="13px"}});
+  $("#addf").onsubmit=e=>{e.preventDefault();const v=$("#addn").value.trim();if(!v)return;S.players.push({id:"p"+(S.nextId++),name:v,present:true,canKeep:true});changed();toast(v+" toegevoegd")};
+  $("#pa").onchange=e=>{S.pair[0]=e.target.value;changed()};$("#pb").onchange=e=>{S.pair[1]=e.target.value;changed()};
+  el.querySelectorAll("[data-fs]").forEach(x=>x.onclick=()=>{S.fieldSize=+x.dataset.fs;changed()});
+}
+
+/* ---------- tabs ---------- */
+function show(v,keep){view=v;["plan","live","team"].forEach(k=>{$("#v-"+k).hidden=k!==v;$("#t-"+k).setAttribute("aria-selected",k===v)});
+  if(v==="plan")renderPlan();if(v==="live")renderLive();if(v==="team")renderTeam();
+  $("#hsub").textContent=`4 × 10 minuten · ${S.players.filter(p=>p.present).length} spelers · wissel elke 5 min`;if(!keep)window.scrollTo(0,0)}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.live.startedAt){try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}}});
+
+const PAGE_URL="https://ronlycrypto.github.io/sdw-wissels/";
+function shareLink(){return PAGE_URL+"#"+SYNC_CODE}
+function parseCode(v){v=(v||"").trim();const m=v.match(/sdw-[a-z0-9]{8}/i);return m?m[0].toLowerCase():null}
+async function joinTeam(c){setTeamCode(c);lastRemote=null;dirty=false;clearTimeout(pushTimer);setSync("wait");
+  try{const j=await rpc("get_team",{p_code:c});
+    if(!j.state){toast("Nog niets gevonden voor deze code");setSync("live");push();return}
+    lastRemote=null;await pull("join");toast("Je kijkt nu mee");show("plan")}catch(e){setSync("off");toast("Geen verbinding")}}
+load();
+SYNC_CODE=teamCode();
+const hashCode=parseCode(location.hash);
+if(!S.plan||S.plan.v!==3){applying=true;generate();applying=false}
+lastMs=matchMs();show("plan");setInterval(tick,250);
+if(hashCode&&hashCode!==SYNC_CODE){joinTeam(hashCode);try{history.replaceState(null,"",location.pathname)}catch(e){}}
+else pull("init");
+setInterval(()=>pull(),3000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull()});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+
+</body>
+</html>
