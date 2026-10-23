@@ -497,7 +497,7 @@ function show(v,keep){view=v;["plan","live","team"].forEach(k=>{$("#v-"+k).hidde
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.live.startedAt){try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}}});
 
-const PAGE_URL="https://ronlycrypto.github.io/sdw-wissels/";
+const PAGE_URL="https://ronlycrypto.github.io/Sdw-wissels/";
 function shareLink(){return PAGE_URL+"#"+SYNC_CODE}
 function parseCode(v){v=(v||"").trim();const m=v.match(/sdw-[a-z0-9]{8}/i);return m?m[0].toLowerCase():null}
 async function joinTeam(c){setTeamCode(c);lastRemote=null;dirty=false;clearTimeout(pushTimer);setSync("wait");
