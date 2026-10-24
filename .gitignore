@@ -2,5 +2,4 @@ node_modules/
 android/
 www/
 *.apk
-*.keystore
 *.jks

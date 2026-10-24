@@ -1,7 +1,7 @@
 name: Android-app (APK)
-# Alleen handmatig starten (Actions > Android-app > Run workflow).
-# De app laadt altijd de nieuwste website, dus een nieuwe APK is zelden nodig.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
@@ -36,13 +36,13 @@ jobs:
             done
           done
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml
-      - name: Geheime sleutel gebruiken (staat niet in de code, alleen als GitHub-secret)
+      - name: Sleutel kiezen (geheime sleutel als die is ingesteld, anders tijdelijk de sleutel uit de repo)
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
-          if [ -z "$KEYSTORE_B64" ]; then echo "::error::Secret ANDROID_KEYSTORE_B64 ontbreekt. Voeg hem toe bij Settings > Secrets and variables > Actions."; exit 1; fi
           mkdir -p ~/.android
-          echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+          if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore; echo "Geheime sleutel gebruikt"
+          else cp signing.keystore ~/.android/debug.keystore; echo "::warning::Tijdelijke sleutel uit de repo gebruikt. Stel ANDROID_KEYSTORE_B64 in voor een veilige sleutel."; fi
       - name: APK bouwen
         working-directory: android
         run: |
