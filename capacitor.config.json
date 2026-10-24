@@ -1,0 +1,9 @@
+{
+  "appId": "nl.sdw.o83.wissels",
+  "appName": "SDW Wissels",
+  "webDir": "www",
+  "server": {
+    "url": "https://ronlycrypto.github.io/Sdw-wissels/",
+    "errorPath": "index.html"
+  }
+}

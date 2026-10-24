@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b7a3e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>SDW Wissels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: club-app band on top, one column of match "quarters" like a coach's clipboard; grid = minute-by-minute strip */
+:root{
+  --bg:#eaf1ec; --surface:#ffffff; --ink:#0f2a1d; --muted:#5b7266; --line:#d3e0d7;
+  --pitch:#0b7a3e; --pitch-deep:#075c2e; --on-pitch:#ffffff;
+  --field:#14904a; --field-soft:#d6efdf; --keeper:#f0b000; --keeper-soft:#fff1c4; --keeper-ink:#5a4000;
+  --red:#d62e2e; --red-soft:#fde3e3; --bench:#e3ebe6;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0a1510; --surface:#11231a; --ink:#e4efe8; --muted:#8fa89a; --line:#22392d;
+  --pitch:#0b6334; --pitch-deep:#084a27; --on-pitch:#ffffff;
+  --field:#2bb565; --field-soft:#173d28; --keeper:#f5c02a; --keeper-soft:#3a3010; --keeper-ink:#ffe08a;
+  --red:#ff5c5c; --red-soft:#3d1717; --bench:#1a2e23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a1510; --surface:#11231a; --ink:#e4efe8; --muted:#8fa89a; --line:#22392d;
+  --pitch:#0b6334; --pitch-deep:#084a27; --on-pitch:#ffffff;
+  --field:#2bb565; --field-soft:#173d28; --keeper:#f5c02a; --keeper-soft:#3a3010; --keeper-ink:#ffe08a;
+  --red:#ff5c5c; --red-soft:#3d1717; --bench:#1a2e23; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--pitch)}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--pitch);color:var(--on-pitch)}
+.brand{display:flex;align-items:center;gap:12px;padding-block:14px 10px;max-width:720px;margin:0 auto}
+.crest{width:42px;height:42px;border-radius:50%;background:#fff;color:#c62020;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:17px;flex:none;border:3px solid #c62020}
+.brand h1{margin:0;font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.brand p{margin:2px 0 0;font-size:13px;opacity:.85}
+.tabs{display:flex;background:var(--pitch-deep)}
+.tabs .in{display:flex;max-width:720px;margin:0 auto;width:100%}
+.tabs button{flex:1;background:none;border:0;color:rgba(255,255,255,.7);font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.06em;text-transform:uppercase;padding:12px 4px;border-bottom:3px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:#fff;border-bottom-color:#fff}
+.tabs button:focus-visible{outline:2px solid #fff;outline-offset:-4px}
+main{max-width:720px;margin:0 auto;padding-block:16px 48px}
+section{display:flex;flex-direction:column;gap:14px}
+h2{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:15px;color:var(--muted);margin:6px 0 0}
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.summary .big{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.05;text-wrap:balance}
+.summary .sub{color:var(--muted);font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:600 15px var(--body);border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--pitch);border-color:var(--pitch);color:#fff}
+.btn.danger{color:var(--red)}
+.btn:focus-visible,.chip-t:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--field);outline-offset:2px}
+.btn.big{font-size:18px;padding:14px 18px;flex:1;justify-content:center}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.q-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.q-title{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.03em}
+.q-title small{font-family:var(--body);font-weight:500;font-size:13px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
+.kchip{background:var(--keeper-soft);color:var(--keeper-ink);border:1px solid var(--keeper);border-radius:999px;padding:3px 10px;font-weight:700;font-size:13px;white-space:nowrap}
+.q-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--field-soft);color:var(--ink);border-radius:8px;padding:4px 9px;font-weight:600;font-size:14px}
+.chip.bench{background:var(--bench);color:var(--muted)}
+.chip.star::after{content:" ★";color:var(--keeper)}
+.ev{display:flex;gap:10px;align-items:flex-start;border-top:1px dashed var(--line);padding-top:10px}
+.ev .t{font-family:var(--display);font-weight:700;font-size:20px;min-width:46px;font-variant-numeric:tabular-nums;color:var(--red);line-height:1.1}
+.ev .sw{display:flex;flex-direction:column;gap:2px;min-width:0}
+.in{color:var(--field);font-weight:700}
+.out{color:var(--red);font-weight:700}
+.pause{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:12px;background:transparent;border:1px dashed var(--muted);color:var(--ink);font-size:14px}
+.pause b.pt{font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-size:15px;white-space:nowrap}
+.gridwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+table.g{border-collapse:separate;border-spacing:0;font-size:13px}
+table.g th,table.g td{padding:0}
+table.g td.n{padding-right:8px;white-space:nowrap;font-weight:600;position:sticky;left:0;background:var(--surface)}
+table.g td.c{width:13px;height:22px}
+table.g td.c i{display:block;height:16px;margin:0 1px;border-radius:3px;background:var(--bench)}
+table.g td.c.f i{background:var(--field)}
+table.g td.c.k i{background:var(--keeper)}
+table.g td.c.bl{border-left:2px solid var(--muted);padding-left:2px}
+table.g td.m{padding-left:8px;font-family:var(--display);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums;text-align:right}
+table.g th{font-weight:600;color:var(--muted);font-size:11px;text-align:left;padding-bottom:4px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;background:var(--c)}
+/* live */
+.clock{background:var(--pitch);color:#fff;border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;overflow:hidden}
+.clock::before{content:"";position:absolute;inset:8px;border:2px solid rgba(255,255,255,.18);border-radius:10px;pointer-events:none}
+.clock::after{content:"";position:absolute;left:50%;top:8px;bottom:8px;border-left:2px solid rgba(255,255,255,.18)}
+.clock .phase{font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:16px;opacity:.9;position:relative;z-index:1;background:var(--pitch);padding:0 8px}
+.clock .time{font-family:var(--display);font-weight:800;font-size:76px;line-height:1;font-variant-numeric:tabular-nums;position:relative;z-index:1;background:var(--pitch);padding:0 10px}
+.clock .bar{width:100%;max-width:340px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);position:relative;z-index:1;margin-top:6px;display:flex;gap:3px;background:none}
+.clock .bar span{flex:1;background:rgba(255,255,255,.22);border-radius:3px;overflow:hidden}
+.clock .bar span i{display:block;height:100%;background:#fff;width:0}
+.alert{border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;border:2px solid var(--red);background:var(--red-soft)}
+.alert .h{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.03em;color:var(--red)}
+.alert.calm{border-color:var(--line);background:var(--surface)}
+.alert.calm .h{color:var(--ink);font-size:18px}
+.alert.keep{border-color:var(--keeper);background:var(--keeper-soft)}
+.alert.keep .h{color:var(--keeper-ink)}
+.swline{font-size:18px;font-weight:600}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl .small{flex:none}
+/* team */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.pl{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center;padding-block:4px;border-bottom:1px solid var(--line)}
+.pl:last-child{border-bottom:0}
+.pl input[type=text]{width:100%;min-width:0;font:500 15px var(--body);border:1px solid transparent;background:transparent;color:var(--ink);padding:6px 4px;border-radius:8px}
+.pl input[type=text]:hover{border-color:var(--line)}
+.chip-t{font:600 12px var(--body);border-radius:999px;border:1px solid var(--line);background:var(--bench);color:var(--muted);padding:5px 9px;cursor:pointer;white-space:nowrap}
+.chip-t[aria-pressed="true"]{background:var(--field-soft);color:var(--ink);border-color:var(--field)}
+.chip-t.kp[aria-pressed="true"]{background:var(--keeper-soft);color:var(--keeper-ink);border-color:var(--keeper)}
+.x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+select,input.txt{font:500 15px var(--body);padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--surface);color:var(--ink);font:600 14px var(--body);padding:9px 6px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--pitch);color:#fff}
+.note{font-size:13px;color:var(--muted)}
+.warn{font-size:14px;color:var(--red);font-weight:600}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+.blk{display:flex;flex-direction:column;gap:8px;padding-block:10px;border-top:1px dashed var(--line)}
+.blk:first-child{border-top:0;padding-top:0}
+.blk-h{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.blk-h input{width:24px;height:24px;margin:2px 0 0;accent-color:var(--field);flex:none}
+.blk-h .t{font-family:var(--display);font-weight:700;font-size:20px;min-width:44px;font-variant-numeric:tabular-nums;color:var(--red);line-height:1.1}
+.blk-h .what{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.tick{background:var(--field-soft);color:var(--field);font-weight:700;font-size:12px;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.blk.is-done .what,.blk.is-done .blk-b,.blk.is-done .t{opacity:.5}
+.blk.is-done .what b{text-decoration:line-through}
+.blk-b{display:flex;flex-direction:column;gap:6px;padding-left:34px}
+table.g td.c{width:30px}
+.sync{font:700 12px var(--body);padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.15);white-space:nowrap}
+.sync[data-st="live"]{background:#fff;color:var(--pitch)}
+.code{font:700 22px var(--display);letter-spacing:.06em;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:8px 12px;user-select:all;-webkit-user-select:all;overflow-wrap:anywhere}
+.code.small{font:500 14px var(--body);letter-spacing:0}
+.tabs button{font-size:15px;letter-spacing:.04em}
+.lockcard{border-color:var(--field);background:var(--field-soft)}
+.lockrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.histf{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:10px}
+.histf label{font-size:13px;font-weight:600;color:var(--muted)}
+table.tt{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+table.tt th{text-align:left;font-size:12px;color:var(--muted);font-weight:700;padding:4px 8px 6px 0;white-space:nowrap}
+table.tt td{padding:6px 8px 6px 0;border-top:1px solid var(--line)}
+table.tt td:not(:first-child),table.tt th:not(:first-child){text-align:right}
+.tabs button{font-size:14px;letter-spacing:.03em;padding:12px 2px}
+.hero{display:flex;flex-direction:column;gap:4px;padding-block:6px}
+.hero .big{font-family:var(--display);font-weight:800;font-size:32px;line-height:1;text-transform:uppercase;letter-spacing:.02em}
+.hero .sub{color:var(--muted)}
+.teamlist{display:flex;flex-direction:column;gap:8px}
+.teambtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:700 18px var(--body);color:var(--ink);cursor:pointer}
+.teambtn:focus-visible{outline:2px solid var(--field);outline-offset:2px}
+.teambtn span:nth-child(2){flex:1;min-width:0}
+.crest.sm{width:36px;height:36px;font-size:13px;border-width:2px}
+.chev{font-size:24px;color:var(--muted)}
+.code-in{text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.mcard.cur{border-color:var(--field)}
+.badge{background:var(--red);color:#fff;border-radius:999px;padding:3px 9px;font-weight:700;font-size:12px}
+.mtitle{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:600;font-size:16px}
+.mtitle span{min-width:0}
+.score{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kidrow,.attrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.kidrow{background:var(--keeper-soft);border:1px solid var(--keeper);border-radius:12px;padding:8px 10px;color:var(--keeper-ink)}
+.attrow{padding-block:4px;border-bottom:1px solid var(--line)}
+.attrow:last-of-type{border-bottom:0}
+.attlist{display:flex;flex-direction:column}
+.seg.att{flex:none}
+.seg.att button{padding:7px 14px;min-width:56px}
+.seg.att button[data-att$="|0"][aria-pressed="true"]{background:var(--red);color:#fff}
+.attsum{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600;font-size:14px;color:var(--muted)}
+.attsum .yes,.attv.yes{color:var(--field)}
+.attsum .no,.attv.no{color:var(--red)}
+.attv{font-weight:700;color:var(--muted)}
+.linkbtn{background:none;border:0;color:var(--field);font:700 14px var(--body);cursor:pointer;padding:4px 0;margin-left:auto;text-decoration:underline}
+.mbar{display:flex;align-items:center;gap:10px}
+.mbar select{flex:1;min-width:0}
+.chip-t.unk{border-style:dashed}
+.board{background:var(--pitch);color:#fff;border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;text-align:center}
+.board .side{font-family:var(--display);font-weight:700;font-size:18px;text-transform:uppercase;line-height:1.1;overflow-wrap:anywhere}
+.board .nums{font-family:var(--display);font-weight:800;font-size:60px;line-height:1;font-variant-numeric:tabular-nums;display:flex;gap:10px}
+.board .nums span{opacity:.6}
+.board .when{grid-column:1/-1;font-size:13px;opacity:.85}
+.goalgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.goalbtn{font:700 16px var(--body);padding:14px 10px;border-radius:12px;border:1px solid var(--field);background:var(--field-soft);color:var(--ink);cursor:pointer;text-align:left}
+.goalbtn:active{transform:scale(.97)}
+.glist{gap:0;padding-block:4px}
+.grow{display:flex;align-items:center;gap:12px;padding-block:8px;border-bottom:1px solid var(--line)}
+.grow:last-child{border-bottom:0}
+.gmin{font-family:var(--display);font-weight:700;font-size:20px;min-width:40px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.gname{flex:1;font-weight:600}
+.grow.zij .gname{color:var(--red)}
+.statrow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.statrow div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 4px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.statrow b{font-family:var(--display);font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+.statrow span{font-size:11px;color:var(--muted)}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding-block:6px;border-bottom:1px solid var(--line)}
+.mrow:last-of-type{border-bottom:0}
+.mrow select{width:auto;padding:6px 8px;font-size:14px}
+.mi{display:flex;flex-direction:column;min-width:0}
+.pl{grid-template-columns:minmax(0,1fr) auto auto auto}
+@media (max-width:380px){.statrow{grid-template-columns:repeat(3,1fr)}}
+.dot{display:inline-block;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:var(--red);color:#fff;font:700 11px var(--body);margin-left:4px;padding:0 5px;vertical-align:2px}
+.badge.wait{background:var(--keeper-soft);color:var(--keeper-ink);border:1px solid var(--keeper)}
+.req{border-color:var(--keeper)}
+.req select{width:auto;flex:1;min-width:0}
+.adm{font:700 11px var(--body);color:var(--keeper-ink);background:var(--keeper-soft);border:1px solid var(--keeper);border-radius:999px;padding:1px 7px;vertical-align:1px;text-transform:none}
+.mrow{grid-template-columns:minmax(0,1fr) auto auto auto}
+.mad{grid-column:1/-1;justify-self:start}
+@media (min-width:480px){.mad{grid-column:auto}}
+.hright{display:flex;flex-direction:column;align-items:flex-end;gap:4px;align-self:flex-start}
+.ver{font:600 11px var(--body);opacity:.75;letter-spacing:.03em}
+.teambtn small{display:block;font:500 13px var(--body);color:var(--muted)}
+.crest.used{background:var(--field);border-color:var(--field);color:#fff;font-size:20px}
+.trow{display:flex;align-items:center;gap:10px;padding-block:6px;border-bottom:1px solid var(--line)}
+.modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-left,0px))}
+.mbox{background:var(--surface);color:var(--ink);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.mbox p{margin:0}
+.mic{width:56px;height:56px;border-radius:50%;background:var(--field-soft);color:var(--field);display:grid;place-items:center;font-size:30px;font-weight:700;margin:0 auto}
+.viewbar{background:var(--keeper);color:#3a2a00}
+.vin{max-width:720px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:8px;font-size:14px}
+.vin .btn{padding:6px 12px;font-size:14px;flex:none}
+button.trow{width:100%;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;color:var(--ink);font:inherit;cursor:pointer}
+button.trow .mi{flex:1}
+button.q-head.pick{width:100%;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+button.q-head.pick:focus-visible{outline:2px solid var(--field);outline-offset:-2px}
+.badge.sel{background:var(--field)}
+.badge.lock{background:var(--muted)}
+.mcard.closed{opacity:.92}
+.closebtn{border-color:var(--field);color:var(--field);font-weight:700}
+.pickhint{margin:0}
+button.q-head.pick{flex-wrap:wrap;row-gap:6px}
+.mcard .q-title{white-space:nowrap}
+.mcard .q-head .row{gap:6px}
+.gedit{flex-wrap:wrap}
+.gedit .gmin-in{width:72px;flex:none;padding:8px}
+.gedit select{flex:1;min-width:0;width:auto}
+.gedit .btn{padding:8px 12px}
+.grow .x{font-size:16px}
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="pad"><div class="brand">
+    <div class="crest" id="crest">⚽</div>
+    <div style="flex:1;min-width:0"><h1 id="hname">Wisselschema</h1><p id="hsub"></p></div><div class="hright"><span id="ver" class="ver"></span><span id="sync" class="sync" data-st="wait" hidden>○ …</span></div>
+  </div></div>
+  <nav class="tabs" role="tablist" id="tabs" hidden><div class="in pad">
+    <button role="tab" id="t-agenda" aria-selected="true" data-v="agenda">Agenda</button>
+    <button role="tab" id="t-plan" aria-selected="false" data-v="plan">Indeling</button>
+    <button role="tab" id="t-live" aria-selected="false" data-v="live">Live</button>
+    <button role="tab" id="t-goals" aria-selected="false" data-v="goals">Goals</button>
+    <button role="tab" id="t-team" aria-selected="false" data-v="team">Team</button>
+  </div></nav>
+  <div id="viewbar" class="viewbar" hidden><div class="pad"><div class="vin"><span>👁 Je kijkt mee bij <b id="viewname"></b> · alleen lezen</span><button type="button" class="btn" id="viewback">‹ Mijn team</button></div></div></div>
+</header>
+
+<main class="pad">
+  <section id="v-gate" hidden></section>
+  <section id="v-agenda"></section>
+  <section id="v-plan" hidden></section>
+  <section id="v-live" hidden></section>
+  <section id="v-goals" hidden></section>
+  <section id="v-team" hidden></section>
+</main>
+<div id="toast" role="status"></div>
+<div id="upd" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="updt">
+  <div class="mic">↻</div><div class="q-title" id="updt">Nieuwe versie beschikbaar</div>
+  <p>Ververs de app voor de laatste versie <b>v<span id="updv"></span></b>.</p><p class="note" id="updn"></p>
+  <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
+
+<script>
+const APP_VERSION="2.4.0";
+const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
+const PAGE_URL="https://ronlycrypto.github.io/Sdw-wissels/";
+const U=5, N=8, QU=2, Q=4, MATCH=N*U;
+const PAUSES=["Korte pauze","Lange pauze","Korte pauze"];
+const UMS=U*60000, QMS=QU*UMS, END=MATCH*60000;
+const AUTHKEY="sdw-auth-v1", CACHEKEY="sdw-cache-v1", CURKEY="sdw-cur-v1";
+const ROLE={manager:"Teammanager",coach:"Trainer/coach",ouder:"Ouder",viewer:"Clubbeheer · alleen kijken"};
+let VIEW=null;
+let AUTH=null, DATA=null, S=null, view="agenda", CUR=null;
+let serverOffset=0;
+const nowMs=()=>Date.now()+serverOffset;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rnd=n=>Math.floor(Math.random()*n);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2200)}
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+const MONTHS=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"],DAYS=["zo","ma","di","wo","do","vr","za"];
+function fmtDate(s,withYear){const [y,m,d]=s.split("-").map(Number);const dt=new Date(y,m-1,d);return `${DAYS[dt.getDay()]} ${d} ${MONTHS[m-1]}${withYear?" "+y:""}`}
+const clock=min=>min+":00";
+function copyText(txt,msg){try{navigator.clipboard.writeText(txt).then(()=>toast(msg||"Gekopieerd"),()=>toast("Houd de tekst ingedrukt om te kopiëren"))}catch(e){toast("Houd de tekst ingedrukt om te kopiëren")}}
+
+/* ---------- server ---------- */
+async function rpc(fn,body){const t0=Date.now();let r;
+  try{r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:"POST",headers:{apikey:SB_KEY,Authorization:"Bearer "+SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)})}
+  catch(e){const er=new Error("offline");er.code="offline";throw er}
+  const j=await r.json().catch(()=>null);
+  if(!r.ok){const er=new Error((j&&j.message)||("HTTP "+r.status));er.code=(j&&j.message)||"http";throw er}
+  if(j&&j.now)serverOffset=Date.parse(j.now)+(Date.now()-t0)/2-Date.now();
+  return j}
+const ERR={bad_code:"Die teamcode klopt niet. Vraag de teammanager om de juiste code.",bad_name:"Vul je naam in.",forbidden:"Dat mag alleen een coach of teammanager.",
+  offline:"Geen internet. Probeer het zo opnieuw.",last_manager:"Er moet minstens één teammanager blijven.",not_logged_in:"Je bent uitgelogd.",
+  too_many_members:"Dit team heeft te veel leden.",pending:"Je aanvraag is nog niet goedgekeurd.",last_admin:"Er moet minstens één beheerder blijven.",too_many_requests:"Er staan te veel aanvragen open. Probeer het later.",bad_role:"Kies wat je bent.",team_exists:"Dat team bestaat al.",closed:"Deze wedstrijd is afgerond en kan niet meer worden aangepast.",use_request:"Ververs de app, er is een nieuwe versie.",bad_input:"Vul alle velden in.",no_team:"Dit team bestaat niet meer."};
+const errText=e=>ERR[e.code]||"Er ging iets mis ("+e.message+")";
+let inflight=0,localSeq=0;
+async function act(a,d){if(VIEW){const er=new Error("forbidden");er.code="forbidden";throw er}inflight++;localSeq++;try{return await rpc("app_act",{p_token:AUTH.token,p_action:a,p_data:d||{}})}
+  finally{inflight--;setTimeout(()=>poll(true),30)}}
+function setSync(st){const el=$("#sync");if(el){el.textContent=st==="live"?"● Live":st==="off"?"○ Offline":"○ …";el.dataset.st=st}}
+
+/* ---------- data ---------- */
+const isStaff=()=>!!DATA&&(DATA.me.role==="manager"||DATA.me.role==="coach");
+const isMgr=()=>!!DATA&&DATA.me.role==="manager";
+const canEdit=(m)=>{m=m||curMatch();return isStaff()&&!!m&&!m.closed};
+const isAdmin=()=>!!DATA&&!DATA.pending&&!!DATA.me.is_admin;
+const settings=()=>(DATA&&DATA.team.settings)||{};
+const allPlayers=()=>settings().players||[];
+const activePlayers=()=>allPlayers().filter(p=>!p.gone);
+const matches=()=>DATA?DATA.matches:[];
+const curMatch=()=>matches().find(m=>m.id===CUR)||null;
+const myKids=()=>[];
+function nameOf(id){const pl=allPlayers();const p=pl.find(x=>x.id===id);if(!p)return "?";
+  const parts=p.name.trim().split(/\s+/);let f=parts[0]||"?";f=f[0].toUpperCase()+f.slice(1);
+  const dup=pl.some(o=>!o.gone&&o.id!==id&&(o.name.trim().split(/\s+/)[0]||"").toLowerCase()===f.toLowerCase());
+  return dup&&parts.length>1?f+" "+parts[parts.length-1][0].toUpperCase()+".":f}
+const isStar=id=>isStaff()&&!!S&&S.pair[0]!==S.pair[1]&&S.pair.includes(id);
+function pickDefault(){const t=todayStr(),ms=matches();const up=ms.filter(m=>m.match_date>=t);return (up[0]||ms[ms.length-1]||{}).id||null}
+function ensureCur(){if(!curMatch())CUR=pickDefault();if(!VIEW)ls.set(CURKEY,CUR)}
+function buildS(){const m=curMatch();if(!m){S=null;return}
+  const st=m.state||{},set=settings();
+  S={players:activePlayers().map(p=>({id:p.id,name:p.name,canKeep:p.canKeep!==false,present:m.attendance[p.id]!==false})),
+    pair:(set.pair||[]).slice(0,2),fieldSize:set.fieldSize||6,
+    keeperPick:(st.keeperPick||[null,null,null,null]).slice(),plan:st.plan||null,done:(st.done||[]).slice(),
+    live:Object.assign({elapsed:0,startedAt:null,stopAt:null},st.live||{}),locked:!!st.locked}}
+function matchTitle(m){const me=DATA.team.name,op=m.opponent||"tegenstander";return m.home?`${me} – ${op}`:`${op} – ${me}`}
+function score(m){const g=m.goals||[];const w=g.filter(x=>x.side==="wij").length,z=g.filter(x=>x.side==="zij").length;return m.home?[w,z]:[z,w]}
+function played(m){const t=todayStr();if(m.match_date<t)return true;const l=m.state&&m.state.live;return m.match_date===t&&((l&&l.elapsed>=END)||(m.goals||[]).length>0)}
+
+/* planner state -> server */
+let pending=null,pushT=null,pushing=false;
+function save(){if(!canEdit()||!S)return;const m=curMatch();if(!m)return;localSeq++;
+  m.state={keeperPick:S.keeperPick,plan:S.plan,done:S.done,live:S.live,locked:S.locked};
+  pending={id:m.id,state:m.state};clearTimeout(pushT);pushT=setTimeout(pushState,250)}
+async function pushState(){if(!pending)return;if(pushing){pushT=setTimeout(pushState,250);return}
+  const p=pending;pending=null;pushing=true;
+  try{await act("match_state",{match:p.id,state:p.state});setSync("live")}
+  catch(e){if(!pending)pending=p;setSync("off");if(e.code!=="offline")toast(errText(e));pushT=setTimeout(pushState,3000)}
+  finally{pushing=false}}
+async function setAtt(mid,pid,val){const m=matches().find(x=>x.id===mid);if(!m)return;if(m.closed){toast(ERR.closed);return}
+  if(val==null)delete m.attendance[pid];else m.attendance[pid]=val;if(mid===CUR)buildS();show(view,true);
+  try{await act("attendance",{match:mid,player:pid,value:val})}catch(e){toast(errText(e));DATA.rev=0}}
+async function saveSettings(set){DATA.team.settings=set;buildS();try{await act("settings",{settings:set})}catch(e){toast(errText(e));DATA.rev=0}}
+
+/* polling */
+let polling=false,needRender=false;
+async function poll(force){if(!AUTH||polling)return;if(!force&&(pending||pushing||inflight))return;polling=true;
+  const seq=localSeq;
+  const vw=VIEW;
+  try{const r=vw?await rpc("app_club_view",{p_token:AUTH.token,p_team:vw.id,p_rev:DATA?DATA.rev:0}):await rpc("app_get",{p_token:AUTH.token,p_rev:DATA?DATA.rev:0});setSync("live");
+    if(vw!==VIEW)return;
+    if(!r.same&&!pending&&!pushing&&!inflight&&seq===localSeq)applyData(r)}
+  catch(e){if(e.code==="not_logged_in"){localLogout(DATA&&DATA.pending?"Je aanvraag is niet geaccepteerd.":"Je bent uitgelogd. Meld je opnieuw aan.");return}setSync("off")}
+  finally{polling=false}}
+let lastReq=null;
+function applyData(r){const wasPending=!!(DATA&&DATA.pending);const first=!DATA||wasPending;DATA=r;if(!VIEW){ls.set(CACHEKEY,r);AUTH.team_name=r.team.name;ls.set(AUTHKEY,AUTH)}
+  if(r.pending){S=null;show(view,true);return}
+  if(wasPending)toast("Je bent geaccepteerd. Welkom!");
+  const nReq=(r.requests||[]).length;if(lastReq!==null&&nReq>lastReq)toast(`Nieuwe aanvraag om mee te doen (${nReq}). Zie Team.`);lastReq=r.requests?nReq:null;
+  ensureCur();buildS();lastMs=S?matchMs():0;
+  if(first&&!VIEW&&view==="agenda"&&!isStaff()&&!myKids().length)view="team";
+  const ae=document.activeElement;if(ae&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)&&ae.closest("main")){needRender=true;return}
+  show(view,true)}
+document.addEventListener("focusout",()=>setTimeout(()=>{if(needRender){const ae=document.activeElement;if(!(ae&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName))){needRender=false;show(view,true)}}},50));
+function localLogout(msg){ls.del(AUTHKEY);ls.del(CACHEKEY);AUTH=null;DATA=null;S=null;gate={step:"teams",teams:null,team:null};show("agenda");if(msg)toast(msg)}
+
+/* ---------- planner ---------- */
+function evalCost(on,n,pa,pb,kIdx){
+  let c=0,tot=0;const m=new Array(n).fill(0);
+  for(let p=0;p<n;p++){for(let u=0;u<N;u++)if(on[p*N+u])m[p]++;tot+=m[p]}
+  const avg=tot/n;for(let p=0;p<n;p++)c+=100*(m[p]-avg)**2;
+  if(pa>=0&&pb>=0)for(let u=0;u<N;u++){const k=kIdx[Math.floor(u/QU)];
+    if(!on[pa*N+u]&&!on[pb*N+u])c+=1000;
+    if(k===pa&&on[pb*N+u]!==1)c+=1000; if(k===pb&&on[pa*N+u]!==1)c+=1000;
+    if(on[pa*N+u]&&on[pb*N+u])c+=(N-1-u)*15}  // samen erin: liefst aan het eind
+  for(let u=1;u<N;u++)for(let p=0;p<n;p++)if((on[p*N+u]>0)!==(on[p*N+u-1]>0))c+=3;
+  for(let p=0;p<n;p++){let run=0;for(let u=0;u<=N;u++){if(u<N&&!on[p*N+u]){run++;continue}if(run>1)c+=(run-1)*25;run=0}}
+  return c;
+}
+function solve(n,kIdx,F,pa,pb){
+  let best=null,bestCost=Infinity;const on=new Uint8Array(n*N);
+  for(let r=0;r<5;r++){
+    on.fill(0);
+    for(let u=0;u<N;u++){const k=kIdx[Math.floor(u/QU)];on[k*N+u]=2;
+      for(const p of shuffle([...Array(n).keys()].filter(p=>p!==k)).slice(0,F))on[p*N+u]=1}
+    let cost=evalCost(on,n,pa,pb,kIdx);
+    const I=15000;
+    for(let i=0;i<I;i++){
+      const temp=100*Math.pow(0.0005,i/I),u=rnd(N),k=kIdx[Math.floor(u/QU)],A=[],B=[];
+      for(let p=0;p<n;p++){if(p===k)continue;if(on[p*N+u])A.push(p);else B.push(p)}
+      if(!A.length||!B.length)continue;
+      const p=A[rnd(A.length)],q=B[rnd(B.length)];on[p*N+u]=0;on[q*N+u]=1;
+      const c=evalCost(on,n,pa,pb,kIdx);
+      if(c<=cost||Math.random()<Math.exp((cost-c)/temp)){cost=c;if(c<bestCost){bestCost=c;best=on.slice()}}
+      else{on[p*N+u]=1;on[q*N+u]=0}
+    }
+    if(!best){best=on.slice();bestCost=cost}
+  }
+  return best;
+}
+function generate(mode){
+  mode=mode||"all";
+  const old=S.plan&&S.plan.v===3?S.plan:null;
+  const present=S.players.filter(p=>p.present);
+  if(present.length<2){S.plan=null;save();return}
+  const ids=present.map(p=>p.id),n=ids.length;
+  const fs=Math.min(S.fieldSize,n),F=fs-1;
+  const elig=present.filter(p=>p.canKeep);const pool=(elig.length?elig:present).map(p=>p.id);
+  let keepers=[0,1,2,3].map(b=>{const k=S.keeperPick[b];return k&&ids.includes(k)?k:null});
+  if(mode==="players"&&old&&old.keepers.every(k=>ids.includes(k)))keepers=old.keepers.slice();
+  const used={};keepers.forEach(k=>{if(k)used[k]=(used[k]||0)+1});
+  const order=shuffle(pool.slice());
+  for(let b=0;b<Q;b++)if(!keepers[b]){
+    let pick=null,bestU=1e9;
+    for(const id of order){const u=(used[id]||0)+(b<Q-1&&S.pair.includes(id)?10:0)+(mode==="keepers"&&old&&old.keepers[b]===id?3:0);if(u<bestU&&id!==keepers[b-1]&&id!==keepers[b+1]){bestU=u;pick=id}}
+    if(!pick)pick=order[0];keepers[b]=pick;used[pick]=(used[pick]||0)+1}
+  const kIdx=keepers.map(k=>ids.indexOf(k));
+  const ok=S.pair[0]!==S.pair[1];
+  const on=solve(n,kIdx,F,ok?ids.indexOf(S.pair[0]):-1,ok?ids.indexOf(S.pair[1]):-1);
+  const grid=ids.map((_,p)=>Array.from({length:N},(_,u)=>on[p*N+u]));
+  S.plan={ids,keepers,grid,fs,v:3};S.done=[];
+  if(!S.live.startedAt)S.live={elapsed:0,startedAt:null,stopAt:null};
+  save();
+}
+function planValid(){
+  const P=S.plan;if(!P||P.v!==3)return false;
+  const ids=S.players.filter(p=>p.present).map(p=>p.id);
+  return P.ids.length===ids.length&&P.ids.every((x,i)=>x===ids[i])&&P.fs===Math.min(S.fieldSize,ids.length)
+    &&S.keeperPick.every((k,b)=>!k||!ids.includes(k)||P.keepers[b]===k);
+}
+const P=()=>S.plan;
+function fieldAt(u){const p=P();return p.ids.filter((_,i)=>p.grid[i][u]===1)}
+function benchAt(u){const p=P();return p.ids.filter((_,i)=>p.grid[i][u]===0)}
+function changesAt(u){const p=P(),ins=[],outs=[];
+  p.ids.forEach((id,i)=>{const a=p.grid[i][u-1]>0,b=p.grid[i][u]>0;if(!a&&b)ins.push(id);if(a&&!b)outs.push(id)});
+  return {ins,outs}}
+function minutes(){const p=P();return p.ids.map((id,i)=>({id,m:p.grid[i].filter(v=>v>0).length*U}))}
+const isBreak=u=>u>0&&u%QU===0;
+const keeperAt=u=>P().keepers[Math.floor(u/QU)];
+
+/* ---------- render: plan ---------- */
+const chip=(id,cls="")=>`<span class="chip ${cls}${isStar(id)?" star":""}">${esc(nameOf(id))}</span>`;
+const names=a=>a.map(nameOf).map(esc).join(", ");
+
+function setDone(u,v){S.done[u]=v;save()}
+
+/* ---------- gate: team kiezen + aanmelden ---------- */
+let gate={step:"teams",teams:null,team:null};
+async function loadTeams(){try{gate.teams=await rpc("app_list_teams",{})}catch(e){gate.teams="err"}renderGate()}
+function renderGate(){
+  const el=$("#v-gate");let h="";
+  if(gate.step==="teams"){
+    if(gate.teams===null){el.innerHTML=`<div class="summary"><div class="big">Teams laden…</div></div>`;loadTeams();return}
+    if(gate.teams==="err"){el.innerHTML=`<div class="summary"><div class="big">Geen verbinding</div><div class="sub">Je hebt internet nodig om je aan te melden.</div><div class="row"><button class="btn" id="gretry" type="button">Opnieuw</button></div></div>`;$("#gretry").onclick=()=>{gate.teams=null;renderGate()};return}
+    h=`<div class="hero"><div class="big">Kies je team</div><div class="sub">Daarna vraag je toegang aan. De beheerder van het team keurt je goed.</div></div>
+      <div class="teamlist">${gate.teams.map(t=>`<button type="button" class="teambtn" data-team="${t.id}"><span class="crest sm${t.in_use?" used":""}">${t.in_use?"✓":esc(initials(t.name))}</span><span>${esc(t.name)}<small>${t.in_use?"In gebruik":"Nog niet in gebruik"}</small></span><span class="chev">›</span></button>`).join("")||`<p class="note">Er zijn nog geen teams.</p>`}</div>
+      <p class="note">✓ betekent dat het team de app al gebruikt. Staat je team er niet bij? Vraag de clubbeheerder om het toe te voegen.</p>`;
+  }else if(gate.step==="join"){
+    h=`<div class="hero"><div class="big">${esc(gate.team.name)}</div><div class="sub">${gate.team.in_use===false?"Dit team gebruikt de app nog niet. Je aanvraag gaat naar de clubbeheerder. Na goedkeuring ben jij de beheerder van dit team en keur jij de andere leden goed.":"Vraag toegang aan. De beheerder van het team keurt je aanvraag goed."}</div></div>
+      <form class="card" id="gjoin">
+        <div class="field"><label for="gname">Je naam</label><input class="txt" id="gname" autocomplete="name" placeholder="Voor- en achternaam" required></div>
+        <div class="field"><label for="grole">Ik ben</label><select id="grole" required><option value="" selected disabled>Kies…</option><option value="coach">Trainer/coach</option><option value="manager">Teammanager</option></select></div>
+        <div class="field" id="gnotef" hidden><label for="gnote">Ouder van</label><input class="txt" id="gnote" placeholder="Naam van je kind"></div>
+        <div class="field" id="gadminf" hidden><label for="gadmin">Beheerderscode</label><input class="txt code-in" id="gadmin" autocapitalize="characters" autocomplete="off" placeholder="BEHEER-XXXXXX"></div>
+        <button class="btn big primary" type="submit">Toegang aanvragen</button>
+        <p class="note">Op een tweede telefoon vraag je opnieuw toegang aan met dezelfde naam. De beheerder koppelt die dan aan je account.</p>
+        <button type="button" class="linkbtn" id="gadminl" style="margin:0">Ik ben beheerder en heb een beheerderscode</button>
+      </form>
+      <button type="button" class="btn" id="gback">‹ Ander team</button>`;
+  }else if(gate.step==="create"){
+    h=`<div class="hero"><div class="big">Nieuw team</div><div class="sub">Jij wordt teammanager en beheerder. Jij keurt de aanvragen van ouders en trainers goed.</div></div>
+      <form class="card" id="gcreate">
+        <div class="field"><label for="ctname">Teamnaam</label><input class="txt" id="ctname" placeholder="Bijv. SDW O9-1" required></div>
+        <div class="field"><label for="cyname">Je naam</label><input class="txt" id="cyname" autocomplete="name" required></div>
+        <button class="btn big primary" type="submit">Team maken</button></form>
+      <button type="button" class="btn" id="gback">‹ Terug</button>`;
+  }
+  el.innerHTML=h;
+  el.querySelectorAll("[data-team]").forEach(b=>b.onclick=()=>{gate.team=gate.teams.find(t=>t.id===b.dataset.team);gate.step="join";renderGate();$("#gname").focus()});
+  const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  on("#gnew",()=>{gate.step="create";renderGate()});on("#gback",()=>{gate.step="teams";renderGate()});
+  const fj=$("#gjoin");if(fj){
+    const gr=$("#grole");gr.onchange=()=>{$("#gnotef").hidden=gr.value!=="ouder";$("#gnote").required=gr.value==="ouder"};
+    on("#gadminl",()=>{$("#gadminf").hidden=false;$("#gadminl").hidden=true;$("#gadmin").focus()});
+    fj.onsubmit=async e=>{e.preventDefault();if(!gr.value){toast("Kies wat je bent");return}const btn=fj.querySelector("button[type=submit]");btn.disabled=true;
+    try{const r=await rpc("app_request",{p_team_id:gate.team.id,p_name:$("#gname").value,p_role:gr.value,p_note:gr.value==="ouder"?$("#gnote").value.trim():"",p_admin_code:$("#gadmin").value||null});
+      login(r);toast(r.status==="pending"?"Aanvraag verstuurd":`Welkom! Je bent ${ROLE[r.role].toLowerCase()} bij ${r.team_name}`)}
+    catch(er){toast(errText(er));btn.disabled=false}}}
+  const fc=$("#gcreate");if(fc)fc.onsubmit=async e=>{e.preventDefault();const btn=fc.querySelector("button[type=submit]");btn.disabled=true;
+    try{const r=await rpc("app_create_team",{p_name:$("#ctname").value,p_your_name:$("#cyname").value});login(r);view="team";toast("Team gemaakt. Voeg nu je spelers toe.")}
+    catch(er){toast(errText(er));btn.disabled=false}};
+}
+function fmtAgo(t){const m=Math.round((nowMs()-Date.parse(t))/60000);if(m<1)return "net";if(m<60)return m+" min geleden";const h=Math.round(m/60);if(h<24)return h+" uur geleden";return Math.round(h/24)+" dag(en) geleden"}
+function initials(n){const w=n.trim().split(/\s+/);return (w[0]||"?").slice(0,3).toUpperCase()}
+function login(r){AUTH={token:r.token,team_id:r.team_id,team_name:r.team_name};ls.set(AUTHKEY,AUTH);DATA=null;CUR=null;
+  try{history.replaceState(null,"",location.pathname)}catch(e){}view="agenda";show("agenda");poll(true)}
+
+/* ---------- agenda ---------- */
+let agendaEdit=null, openAtt={}, delArm=null;
+function arm(key,ms){delArm=key;setTimeout(()=>{if(delArm===key){delArm=null;show(view,true)}},ms||3000)}
+function attCounts(m){let y=0,n=0,q=0;activePlayers().forEach(p=>{const a=m.attendance[p.id];if(a===true)y++;else if(a===false)n++;else q++});return {y,n,q}}
+function attSeg(m,pid,editable){const a=m.attendance[pid];
+  if(!editable)return `<span class="attv ${a===true?"yes":a===false?"no":""}">${a===true?"✓ Ja":a===false?"✗ Nee":"?"}</span>`;
+  return `<div class="seg att"><button type="button" data-att="${m.id}|${pid}|1" aria-pressed="${a===true}">Ja</button><button type="button" data-att="${m.id}|${pid}|0" aria-pressed="${a===false}">Nee</button></div>`}
+function matchForm(m){m=m||{match_date:todayStr(),kickoff:"",opponent:"",home:true};
+  return `<form class="card" id="mform"><div class="q-title">${m.id?"Wedstrijd wijzigen":"Nieuwe wedstrijd"}</div>
+    <div class="two"><div class="field"><label for="mdate">Datum</label><input type="date" class="txt" id="mdate" value="${esc(m.match_date)}" required></div>
+    <div class="field"><label for="mtime">Aftrap</label><input type="time" class="txt" id="mtime" value="${esc(m.kickoff)}"></div></div>
+    <div class="field"><label for="mopp">Tegenstander</label><input class="txt" id="mopp" value="${esc(m.opponent)}" placeholder="Bijv. VVA O8-2"></div>
+    <div class="field"><label>Waar</label><div class="seg"><button type="button" data-home="1" aria-pressed="${!!m.home}">Thuis</button><button type="button" data-home="0" aria-pressed="${!m.home}">Uit</button></div></div>
+    <div class="row"><button class="btn primary" type="submit">Opslaan</button><button class="btn" type="button" id="mcancel">Annuleer</button></div></form>`}
+function matchCard(m){
+  const t=todayStr(),c=attCounts(m),sc=score(m),isOpen=!!openAtt[m.id],staff=canEdit(m);
+  const kids=m.closed?[]:myKids();
+  let h=`<article class="q mcard${m.id===CUR?" cur":""}${m.closed?" closed":""}"><button type="button" class="q-head pick" data-pick="${m.id}" aria-pressed="${m.id===CUR}"><div class="q-title">${fmtDate(m.match_date)}${m.kickoff?`<small>${esc(m.kickoff)}</small>`:""}</div>
+    <div class="row">${m.id===CUR?`<span class="badge sel">✓ Gekozen</span>`:""}${m.closed?`<span class="badge lock">🔒 Afgerond</span>`:m.match_date===t?`<span class="badge">Vandaag</span>`:""}<span class="chip ${m.home?"":"bench"}">${m.home?"Thuis":"Uit"}</span></div></button><div class="q-body">
+    <div class="mtitle"><span>${esc(matchTitle(m))}</span>${played(m)||(m.goals||[]).length?`<b class="score">${sc[0]} – ${sc[1]}</b>`:""}</div>`;
+  if(kids.length&&!played(m))h+=kids.map(k=>`<div class="kidrow"><span><b>Is ${esc(nameOf(k))} erbij?</b></span>${attSeg(m,k,true)}</div>`).join("");
+  h+=`<div class="attsum"><span class="yes">✓ ${c.y}</span><span class="no">✗ ${c.n}</span><span>? ${c.q}</span><button type="button" class="linkbtn" data-open="${m.id}">${isOpen?"Verberg":"Wie is er?"}</button></div>`;
+  if(isOpen)h+=`<div class="attlist">${activePlayers().map(p=>`<div class="attrow"><span>${esc(nameOf(p.id))}</span>${attSeg(m,p.id,staff||kids.includes(p.id))}</div>`).join("")}
+    ${staff?`<p class="note">Niet ingevuld (?) telt in de indeling als aanwezig.</p>`:""}</div>`;
+  h+=`<div class="row"><button class="btn primary" type="button" data-goplan="${m.id}">Indeling ›</button>${(m.goals||[]).length||played(m)?`<button class="btn" type="button" data-gogoals="${m.id}">⚽ Doelpunten</button>`:""}
+    ${staff?`<button class="btn" type="button" data-medit="${m.id}">Wijzig</button><button class="btn danger" type="button" data-mdel="${m.id}">${delArm==="m"+m.id?"Zeker? Tik nogmaals":"Verwijder"}</button>`:""}${closeBtn(m)}
+    ${m.closed&&isAdmin()?`<button type="button" class="btn" data-reopen="${m.id}">${delArm==="ro"+m.id?"Zeker?":"Heropenen"}</button>`:""}</div>`;
+  if(agendaEdit===m.id)h+=matchForm(m);
+  return h+`</div></article>`}
+function renderAgenda(){
+  const el=$("#v-agenda"),t=todayStr(),ms=matches(),staff=isStaff();
+  const up=ms.filter(m=>m.match_date>=t),past=ms.filter(m=>m.match_date<t).reverse();
+  const cm=curMatch();
+  let h=cm?`<p class="note pickhint">Gekozen: <b>${fmtDate(cm.match_date)}${cm.opponent?" · "+esc(cm.opponent):""}</b>. Indeling, Live en Goals tonen deze wedstrijd. Tik op een datum om te wisselen.</p>`:"";
+  if(DATA.me.role==="ouder"&&!myKids().length)h+=`<div class="alert keep"><div class="h">Wie is jouw kind?</div><div>Kies bij Team je kind, dan kun je per wedstrijd aangeven of het erbij is.</div><div><button class="btn" type="button" id="gokids">Kind kiezen</button></div></div>`;
+  if(staff)h+=agendaEdit==="new"?matchForm():`<button class="btn primary" type="button" id="madd">+ Wedstrijd toevoegen</button>`;
+  h+=`<h2>Komende wedstrijden</h2>`+(up.map(matchCard).join("")||`<p class="note">${staff?"Nog geen wedstrijden gepland. Tik op “+ Wedstrijd toevoegen”.":"De teammanager heeft nog geen wedstrijden ingevuld."}</p>`);
+  if(past.length)h+=`<h2>Gespeeld</h2>`+past.map(matchCard).join("");
+  el.innerHTML=h;
+  const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  on("#madd",()=>{agendaEdit="new";renderAgenda();$("#mdate").focus()});on("#gokids",()=>show("team"));
+  el.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>{const [mid,pid,v]=b.dataset.att.split("|");const m=matches().find(x=>x.id===mid);
+    const val=v==="1";setAtt(mid,pid,m.attendance[pid]===val?null:val)});
+  el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{openAtt[b.dataset.open]=!openAtt[b.dataset.open];renderAgenda()});
+  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const id=b.dataset.pick;if(id===CUR)return;selectMatch(id);renderAgenda();const m=curMatch();toast(`Alle tabs tonen nu ${fmtDate(m.match_date)}`)});
+  bindClose(el);
+  el.querySelectorAll("[data-goplan]").forEach(b=>b.onclick=()=>{selectMatch(b.dataset.goplan);show("plan")});
+  el.querySelectorAll("[data-gogoals]").forEach(b=>b.onclick=()=>{selectMatch(b.dataset.gogoals);show("goals")});
+  el.querySelectorAll("[data-medit]").forEach(b=>b.onclick=()=>{agendaEdit=b.dataset.medit;renderAgenda()});
+  el.querySelectorAll("[data-mdel]").forEach(b=>b.onclick=async()=>{const id=b.dataset.mdel;if(delArm!=="m"+id){arm("m"+id);renderAgenda();return}
+    delArm=null;DATA.matches=matches().filter(m=>m.id!==id);ensureCur();buildS();renderAgenda();
+    try{await act("match_delete",{id});toast("Wedstrijd verwijderd")}catch(e){toast(errText(e));DATA.rev=0}});
+  const f=$("#mform");if(f){let home=f.querySelector("[data-home='1']").getAttribute("aria-pressed")==="true";
+    f.querySelectorAll("[data-home]").forEach(b=>b.onclick=()=>{home=b.dataset.home==="1";f.querySelectorAll("[data-home]").forEach(x=>x.setAttribute("aria-pressed",(x.dataset.home==="1")===home))});
+    $("#mcancel").onclick=()=>{agendaEdit=null;renderAgenda()};
+    f.onsubmit=async e=>{e.preventDefault();const d={match_date:$("#mdate").value,kickoff:$("#mtime").value,opponent:$("#mopp").value.trim(),home};
+      if(!d.match_date){toast("Kies een datum");return}
+      if(agendaEdit&&agendaEdit!=="new")d.id=agendaEdit;
+      agendaEdit=null;renderAgenda();
+      try{const r=await act("match_upsert",d);if(!d.id){CUR=r.id;ls.set(CURKEY,CUR)}toast(d.id?"Wedstrijd gewijzigd":"Wedstrijd toegevoegd")}catch(er){toast(errText(er))}}}
+}
+async function closeMatch(id){const m=matches().find(x=>x.id===id);if(!m)return;
+  const d={match:id};if(pending&&pending.id===id){d.state=pending.state;pending=null;clearTimeout(pushT)}
+  m.closed=true;m.closed_by=DATA.me.name;m.closed_at=new Date(nowMs()).toISOString();if(id===CUR)buildS();show(view,true);
+  try{await act("match_close",d);toast("Wedstrijd afgerond 🔒")}catch(e){m.closed=false;toast(errText(e));DATA.rev=0;show(view,true)}}
+async function reopenMatch(id){const m=matches().find(x=>x.id===id);if(!m)return;m.closed=false;show(view,true);
+  try{await act("match_reopen",{match:id});toast("Wedstrijd heropend")}catch(e){m.closed=true;toast(errText(e));DATA.rev=0;show(view,true)}}
+function closeBtn(m){if(!m||m.closed||!isStaff()||m.match_date>todayStr())return "";
+  return `<button type="button" class="btn closebtn" data-close="${m.id}">${delArm==="cl"+m.id?"Zeker? Daarna kan niemand meer iets wijzigen":"🔒 Wedstrijd afronden"}</button>`}
+function closedBar(m){if(!m||!m.closed)return "";
+  return `<div class="card lockcard"><div class="lockrow"><div><div class="q-title">🔒 Afgerond</div><div class="note">${m.closed_by?"Door "+esc(m.closed_by)+" · ":""}alles staat vast en is alleen nog te bekijken.</div></div>
+    ${isAdmin()?`<button type="button" class="btn" data-reopen="${m.id}">${delArm==="ro"+m.id?"Zeker?":"Heropenen"}</button>`:""}</div></div>`}
+function bindClose(el){
+  el.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const id=b.dataset.close;if(delArm!=="cl"+id){arm("cl"+id,4000);show(view,true);return}delArm=null;closeMatch(id)});
+  el.querySelectorAll("[data-reopen]").forEach(b=>b.onclick=()=>{const id=b.dataset.reopen;if(delArm!=="ro"+id){arm("ro"+id);show(view,true);return}delArm=null;reopenMatch(id)});
+}
+function selectMatch(id){CUR=id;ls.set(CURKEY,CUR);buildS();lastMs=S?matchMs():0;flashU=null}
+function matchBar(){const ms=matches();if(!ms.length)return "";
+  return `<div class="mbar"><label for="msel" class="lbl">Wedstrijd</label><select id="msel">${ms.map(m=>`<option value="${m.id}"${m.id===CUR?" selected":""}>${fmtDate(m.match_date)}${m.opponent?" · "+esc(m.opponent):""}${m.home?"":" (uit)"}${m.closed?" 🔒":""}</option>`).join("")}</select></div>`}
+function bindMatchBar(){const s=$("#msel");if(s)s.onchange=()=>{selectMatch(s.value);s.blur();show(view,true)}}
+function noMatch(el){el.innerHTML=`<div class="summary"><div class="big">Nog geen wedstrijd</div><div class="sub">${isStaff()?"Voeg eerst een wedstrijd toe bij Agenda.":"De teammanager heeft nog geen wedstrijden ingevuld."}</div></div>`}
+
+/* ---------- indeling ---------- */
+function renderPlan(){
+  const el=$("#v-plan");if(!S){noMatch(el);return}
+  const staff=canEdit(),m=curMatch();
+  const present=S.players.filter(x=>x.present);
+  const L=!!S.locked&&P()&&P().v===3;
+  let h=matchBar()+closedBar(m);
+  if(staff&&!L){
+    const kOpts=b=>`<option value="">Automatisch</option>`+present.map(x=>`<option value="${x.id}"${S.keeperPick[b]===x.id?" selected":""}>${esc(nameOf(x.id))}</option>`).join("");
+    const dupK=S.keeperPick.filter(Boolean).length!==new Set(S.keeperPick.filter(Boolean)).size;
+    h+=`<div class="card"><div class="q-title">Wie is er?</div>
+      <div class="chips">${S.players.map(x=>{const a=m.attendance[x.id];return `<button type="button" class="chip-t${a===undefined?" unk":""}" data-pq="${x.id}" aria-pressed="${x.present}">${x.present?(a===true?"✓ ":"? "):"✗ "}${esc(nameOf(x.id))}</button>`}).join("")}</div>
+      <div class="note">Tik op een naam om iemand op afwezig te zetten. ${present.length} van ${S.players.length} aanwezig. Een ? betekent dat de ouder nog niets heeft ingevuld.</div>
+      <div class="q-title">Keepers kiezen</div>
+      <div class="two">${[0,1,2,3].map(b=>`<div class="field"><label for="kq${b}">Kwart ${b+1} · ${b*10}–${b*10+10} min</label><select id="kq${b}" data-kq="${b}">${kOpts(b)}</select></div>`).join("")}</div>
+      ${dupK?`<div class="note">Eén kind keept meer dan één kwart. Dat mag, de speeltijd wordt dan anders verdeeld.</div>`:""}
+      <button class="btn big primary" id="calc" type="button">▶ Start: bereken indeling</button>
+      ${P()&&!planValid()?`<div class="warn">Aanwezigheid of keepers aangepast. Druk op Start om de indeling opnieuw te berekenen.</div>`:""}
+    </div>`;
+  }else if(staff&&L){
+    h+=`<div class="card lockcard"><div class="lockrow"><div><div class="q-title">🔒 Indeling staat vast</div>
+      <div class="note">Aanwezigen, keepers en wissels blijven zo. Vinkjes zetten kan gewoon.</div></div>
+      <button class="btn" id="unlock" type="button">🔓 Losmaken</button></div></div>`;
+  }else{
+    const abs=S.players.filter(x=>!x.present);
+    h+=`<div class="card"><div class="q-title">${esc(matchTitle(m))}</div>
+      <div class="note">${present.length} spelers${abs.length?` · afwezig: ${abs.map(x=>esc(nameOf(x.id))).join(", ")}`:""}</div>
+      ${L?`<div class="note">🔒 De coach heeft deze indeling vastgezet.</div>`:""}</div>`;
+  }
+  if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?(present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."):"De coach heeft voor deze wedstrijd nog geen indeling gemaakt."}</div></div>`;bindPlan(el);bindMatchBar();return}
+  const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
+  let viol=0;if(S.pair[0]!==S.pair[1])for(let u=0;u<N;u++){const b=benchAt(u),k=keeperAt(u),[a,c]=S.pair;
+    if((b.includes(a)&&b.includes(c))||(k===a&&b.includes(c))||(k===c&&b.includes(a)))viol++}
+  const subsTotal=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length).length;
+  const doneCount=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length&&S.done[u]).length;
+  h+=`<div class="summary">
+    <div class="big">${mx===mn?`Iedereen speelt ${mx} minuten`:`Iedereen speelt ${mn}–${mx} minuten`}</div>
+    <div class="sub">${p.ids.length} spelers · ${p.fs} op het veld · 4 × 10 min · wissel elke 5 min${S.pair[0]!==S.pair[1]&&staff?` · ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} nooit samen op de bank`:""}</div>
+    ${staff&&mx!==mn?`<div class="note">Met ${p.ids.length} spelers kan het niet precies gelijk. Met “Hussel spelers” krijgen andere kinderen de extra 5 minuten.</div>`:""}
+    ${staff&&viol?`<div class="warn">Let op: in ${viol} blok(ken) lukt de regel voor ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} niet.</div>`:""}
+    <div class="sub"><b>${doneCount} van ${subsTotal}</b> wissels gedaan</div>
+    ${staff&&!L?`<div class="row"><button class="btn" id="hplayers" type="button">↻ Hussel spelers</button><button class="btn" id="hkeepers" type="button">🧤 Hussel keepers</button><button class="btn primary" id="lock" type="button">🔒 Vastzetten</button></div>
+    <div class="note">Hussel spelers: zelfde keepers, nieuwe wissels. Hussel keepers: nieuwe keepers voor de kwarten op Automatisch.</div>`:""}
+    <div class="row"><button class="btn" id="copy" type="button">Kopieer voor WhatsApp</button>${staff&&doneCount?`<button class="btn" id="undone" type="button">Vinkjes wissen</button>`:""}</div>
+  </div>`;
+  for(let q=0;q<Q;q++){
+    h+=`<article class="q"><div class="q-head"><div class="q-title">Kwart ${q+1}<small>${q*10}–${q*10+10} min</small></div><span class="kchip">🧤 ${esc(nameOf(p.keepers[q]))}</span></div><div class="q-body">`;
+    for(let k=0;k<QU;k++){const u=q*QU+k,t0=u*U;
+      if(u===0){h+=`<div class="blk"><div class="blk-h"><span class="t">0:00</span><b>Aftrap</b></div>`}
+      else{const c=changesAt(u),d=!!S.done[u];
+        const what=isBreak(u)?`${PAUSES[q-1]} · keeper wordt ${esc(nameOf(p.keepers[q]))}`:`Wissel om ${clock(t0)}`;
+        h+=`<div class="blk${d?" is-done":""}"><label class="blk-h" for="dn${u}">
+          <input type="checkbox" id="dn${u}" data-done="${u}"${d?" checked":""}${staff&&(c.ins.length||isBreak(u))?"":" disabled"}>
+          <span class="t">${clock(t0)}</span><span class="what"><b>${what}</b>${c.ins.length?`<span class="in">↑ ${names(c.ins)}</span><span class="out">↓ ${names(c.outs)}</span>`:`<span class="note">Geen wissel</span>`}</span>
+          ${d?`<span class="tick">Gedaan</span>`:""}</label>`}
+      h+=`<div class="blk-b"><div class="lbl">Veld ${t0}–${t0+U} min</div><div class="chips">${fieldAt(u).map(id=>chip(id)).join("")}</div>
+        <div class="lbl">Bank</div><div class="chips">${benchAt(u).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></div>`;
+    }
+    h+=`</div></article>`;
+  }
+  h+=`<h2>Speeltijd per blok van 5 minuten</h2><div class="gridwrap"><table class="g"><thead><tr><th></th>${Array.from({length:N},(_,u)=>`<th>${u*U}</th>`).join("")}<th style="text-align:right">min</th></tr></thead><tbody>`;
+  p.ids.forEach((id,i)=>{h+=`<tr><td class="n">${esc(nameOf(id))}${isStar(id)&&staff?" ★":""}</td>${p.grid[i].map((v,u)=>`<td class="c ${v===2?"k":v?"f":""}${isBreak(u)?" bl":""}"><i></i></td>`).join("")}<td class="m">${mins[i].m}</td></tr>`});
+  h+=`</tbody></table><div class="legend"><span style="--c:var(--field)">Veld</span><span style="--c:var(--keeper)">Keeper</span><span style="--c:var(--bench)">Bank</span></div></div>`;
+  el.innerHTML=h;bindPlan(el);bindMatchBar();bindClose(el);
+  const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  on("#hplayers",()=>{generate("players");renderPlan();toast("Spelers gehusseld, keepers hetzelfde")});
+  on("#hkeepers",()=>{if(S.keeperPick.every(Boolean)){toast("Zet een kwart op Automatisch om keepers te husselen");return}generate("keepers");renderPlan();toast("Keepers gehusseld")});
+  on("#lock",()=>{S.locked=true;save();renderPlan();toast("Indeling vastgezet");window.scrollTo(0,0)});
+  on("#copy",copyPlan);
+  on("#undone",()=>{S.done=[];save();renderPlan()});
+  el.querySelectorAll("[data-done]").forEach(x=>x.onchange=()=>{setDone(+x.dataset.done,x.checked);renderPlan()});
+}
+function bindPlan(el){
+  const ul=$("#unlock");if(ul)ul.onclick=()=>{S.locked=false;save();renderPlan();toast("Indeling losgemaakt")};
+  el.querySelectorAll("[data-kq]").forEach(x=>x.onchange=()=>{S.keeperPick[+x.dataset.kq]=x.value||null;save();x.blur();renderPlan()});
+  el.querySelectorAll("[data-pq]").forEach(x=>x.onclick=()=>{const pl=S.players.find(y=>y.id===x.dataset.pq);
+    if(pl.present&&S.keeperPick.includes(pl.id)){S.keeperPick=S.keeperPick.map(k=>k===pl.id?null:k);save()}setAtt(CUR,pl.id,!pl.present);});
+  const c=$("#calc");if(c)c.onclick=()=>{generate("all");renderPlan();toast("Indeling berekend");const s=$(".summary");s&&s.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})};
+}
+function planText(){
+  const p=P(),m=curMatch();let s=`⚽ ${DATA.team.name} · ${fmtDate(m.match_date)}${m.opponent?" · "+matchTitle(m):""}\n`;
+  for(let q=0;q<Q;q++){s+=`\nKwart ${q+1} (${q*10}-${q*10+10} min) · keeper ${nameOf(p.keepers[q])}\n`;
+    for(let k=0;k<QU;k++){const u=q*QU+k;
+      if(u>0){const c=changesAt(u);s+=`${clock(u*U)} ${isBreak(u)?PAUSES[q-1].toLowerCase()+": ":""}${c.ins.length?`erin ${c.ins.map(nameOf).join(", ")} / eruit ${c.outs.map(nameOf).join(", ")}`:"geen wissel"}\n`}
+      s+=`  Veld ${u*U}-${u*U+U}: ${fieldAt(u).map(nameOf).join(", ")}\n`}}
+  s+="\nSpeeltijd: "+minutes().map(x=>`${nameOf(x.id)} ${x.m}`).join(", ");
+  return s}
+function copyPlan(){copyText(planText())}
+
+/* ---------- live ---------- */
+let audio=null,lastMs=0,flashUntil=0,flashU=null,resetArm=false,wake=null;
+function beep(freq=880,dur=.18,times=1){if(!audio)return;try{for(let i=0;i<times;i++){const o=audio.createOscillator(),g=audio.createGain();
+  o.frequency.value=freq;o.connect(g);g.connect(audio.destination);const st=audio.currentTime+i*(dur+.08);
+  g.gain.setValueAtTime(.25,st);g.gain.exponentialRampToValueAtTime(.001,st+dur);o.start(st);o.stop(st+dur)}}catch(e){}}
+function matchMs(){const L=S.live;return Math.min(END,L.elapsed+(L.startedAt?nowMs()-L.startedAt:0))}
+function fmt(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function startClock(){
+  try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume&&audio.resume()}catch(e){}
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}
+  const L=S.live;if(L.startedAt||L.elapsed>=END)return;
+  if(L.elapsed>0&&L.elapsed%QMS===0){const u=L.elapsed/UMS;if(changesAt(u).ins.length||isBreak(u))S.done[u]=true}
+  L.stopAt=(Math.floor(L.elapsed/QMS)+1)*QMS;L.startedAt=nowMs();save();renderLive()}
+function pauseClock(){const L=S.live;if(!L.startedAt)return;L.elapsed=matchMs();L.startedAt=null;save();renderLive()}
+function adjust(d){const L=S.live;const ms=Math.max(0,Math.min(END,matchMs()+d));
+  if(L.startedAt){L.elapsed=ms;L.startedAt=nowMs();L.stopAt=(Math.floor(ms/QMS)+1)*QMS}else L.elapsed=ms;lastMs=ms;save();renderLive()}
+function resetClock(){S.live={elapsed:0,startedAt:null,stopAt:null};lastMs=0;flashUntil=0;save();renderLive()}
+function renderLive(){
+  const el=$("#v-live");if(!S){noMatch(el);return}
+  const staff=canEdit();
+  if(!P()||P().v!==3){el.innerHTML=matchBar()+closedBar(curMatch())+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?"Maak eerst de indeling bij Indeling.":"De coach heeft nog geen indeling gemaakt."}</div></div>`;bindMatchBar();return}
+  const L=S.live,ms=matchMs(),running=!!L.startedAt,ended=ms>=END;
+  const atBreak=!running&&ms>0&&ms%QMS===0&&!ended;
+  const q=ended?Q-1:atBreak?ms/QMS:Math.min(Q-1,Math.floor(ms/QMS));
+  const uNow=ended?N-1:atBreak?ms/UMS:Math.min(N-1,Math.floor(ms/UMS));
+  const phase=ended?"Afgelopen":atBreak?PAUSES[q-1]:(ms===0?"Klaar voor de aftrap":`Kwart ${q+1}`+(running?"":" · gepauzeerd"));
+  const sc=score(curMatch());
+  let h=matchBar()+closedBar(curMatch())+`<div class="clock"><div class="phase">${phase}</div><div class="time" id="ltime">${fmt(ms)}</div>
+    <div class="bar">${[0,1,2,3].map(b=>`<span><i style="width:${Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))}%"></i></span>`).join("")}</div>
+    ${(curMatch().goals||[]).length?`<div class="phase">${esc(matchTitle(curMatch()))} · ${sc[0]} – ${sc[1]}</div>`:""}</div>`;
+  if(staff)h+=`<div class="ctrl">${ended?"":running?`<button class="btn big" id="lpause" type="button">❚❚ Pauze</button>`
+    :`<button class="btn big primary" id="lstart" type="button">▶ ${ms===0?"Start wedstrijd":atBreak?`Start kwart ${q+1}`:"Verder"}</button>`}<button class="btn big" id="lgoal" type="button">⚽ Doelpunt</button></div>`;
+  const doneBtn=u=>S.done[u]?`<span class="tick">✓ Gedaan</span>`:staff?`<button class="btn" type="button" data-ldone="${u}">✓ Wissel gedaan</button>`:"";
+  if(Date.now()<flashUntil&&flashU!=null){const c=changesAt(flashU);
+    h+=`<div class="alert"><div class="h">Wissel nu!</div><div class="swline"><span class="in">↑ ${names(c.ins)}</span></div><div class="swline"><span class="out">↓ ${names(c.outs)}</span></div><div>${doneBtn(flashU)}</div></div>`}
+  else if(atBreak){const u=ms/UMS,c=changesAt(u);
+    h+=`<div class="alert keep"><div class="h">🧤 Keeper: ${esc(nameOf(P().keepers[q]))}</div>${c.ins.length?`<div class="swline"><span class="in">↑ ${names(c.ins)}</span></div><div class="swline"><span class="out">↓ ${names(c.outs)}</span></div>`:`<div>Verder geen wissels.</div>`}<div>${doneBtn(u)}</div></div>`}
+  else if(!ended){
+    const prevU=uNow;
+    if(staff&&prevU>0&&!isBreak(prevU)&&changesAt(prevU).ins.length&&!S.done[prevU]){const c=changesAt(prevU);
+      h+=`<div class="alert"><div class="h">Wissel van ${clock(prevU*U)} nog niet afgevinkt</div><div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div><div>${doneBtn(prevU)}</div></div>`}
+    const nx=uNow+1;
+    if(nx<N&&!isBreak(nx)){const c=changesAt(nx);
+      h+=`<div class="alert calm"><div class="h">Volgende wissel om ${clock(nx*U)} · nog <span id="lcd">${fmt(nx*UMS-ms)}</span></div>${c.ins.length?`<div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div>`:`<div>Geen wissel nodig.</div>`}</div>`}
+    else if(q<Q-1)h+=`<div class="alert calm"><div class="h">Pauze om ${clock((q+1)*10)} · nog <span id="lcd">${fmt((q+1)*QMS-ms)}</span></div><div>Daarna wordt ${esc(nameOf(P().keepers[q+1]))} keeper.</div></div>`;
+  }
+  h+=`<article class="q"><div class="q-head"><div class="q-title">${atBreak?"Na de pauze":"Nu in het veld"}</div><span class="kchip">🧤 ${esc(nameOf(keeperAt(uNow)))}</span></div><div class="q-body">
+    <div class="chips">${fieldAt(uNow).map(id=>chip(id)).join("")}</div>
+    <div class="lbl">Bank</div><div class="chips">${benchAt(uNow).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></article>`;
+  if(staff)h+=`<div class="ctrl"><button class="btn small" id="lm" type="button">−10 s</button><button class="btn small" id="lp" type="button">+10 s</button><button class="btn small danger" id="lr" type="button">${resetArm?"Tik nogmaals om te resetten":"Reset"}</button></div>
+    <p class="note">De klok stopt vanzelf na elke 10 minuten. Elke 5 minuten piept je telefoon voor de wissel (geluid aan). Met −10 s en +10 s zet je de klok gelijk met de scheidsrechter.</p>`;
+  else if(!curMatch().closed)h+=`<p class="note">Je kijkt mee. De coach bedient de klok, deze pagina loopt vanzelf mee.</p>`;
+  if(ended)h+=closeBtn(curMatch());
+  el.innerHTML=h;bindMatchBar();bindClose(el);
+  const b=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  b("#lstart",startClock);b("#lpause",pauseClock);b("#lm",()=>adjust(-10000));b("#lp",()=>adjust(10000));b("#lgoal",()=>show("goals"));
+  el.querySelectorAll("[data-ldone]").forEach(x=>x.onclick=()=>{setDone(+x.dataset.ldone,true);flashUntil=0;flashU=null;renderLive();toast("Afgevinkt")});
+  b("#lr",()=>{if(resetArm){resetArm=false;resetClock()}else{resetArm=true;renderLive();setTimeout(()=>{if(resetArm){resetArm=false;if(view==="live")renderLive()}},3000)}});
+}
+function tick(){
+  if(!S||!P()||P().v!==3)return;
+  const L=S.live;
+  if(L.startedAt){let ms=matchMs();
+    if(L.stopAt&&ms>=L.stopAt){L.elapsed=L.stopAt;L.startedAt=null;save();ms=L.elapsed;beep(660,.35,3);
+      if(wake){try{wake.release()}catch(e){}wake=null}}
+    for(let u=1;u<N;u++){if(isBreak(u))continue;const at=u*UMS;if(!changesAt(u).ins.length)continue;
+      if(lastMs<at-15000&&ms>=at-15000&&ms<at)beep(988,.12,1);
+      if(lastMs<at&&ms>=at&&ms<at+60000){flashU=u;flashUntil=Date.now()+60000;beep(1046,.2,2)}}
+    const prevBlk=Math.floor(lastMs/UMS);lastMs=ms;
+    if(view==="live"){const tl=$("#ltime");
+      if(!tl||!L.startedAt||Math.floor(ms/UMS)!==prevBlk||(flashU!=null&&Date.now()>=flashUntil)){if(Date.now()>=flashUntil)flashU=null;if(!(document.activeElement&&document.activeElement.id==="msel"))renderLive()}
+      else{tl.textContent=fmt(ms);const cd=$("#lcd");
+        if(cd){const u=Math.floor(ms/UMS)+1;cd.textContent=fmt(Math.min(u*UMS,(Math.floor(ms/QMS)+1)*QMS)-ms)}
+        document.querySelectorAll(".clock .bar i").forEach((i,b)=>i.style.width=Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))+"%")}}
+  }else lastMs=matchMs();
+}
+
+/* ---------- doelpunten ---------- */
+let goalEdit=null;
+function goalMinute(){if(!S)return null;const ms=matchMs();return ms>0?Math.min(MATCH,Math.floor(ms/60000)+1):null}
+async function addGoal(side,player){const m=curMatch();if(!m)return;
+  const g={id:Date.now().toString(36)+rnd(1e6).toString(36),side,player:player||null,minute:goalMinute(),at:new Date(nowMs()).toISOString()};
+  m.goals=(m.goals||[]).concat([g]);renderGoals();toast(side==="wij"?`⚽ Goal${player?" "+nameOf(player):""}!`:"Tegendoelpunt genoteerd");
+  try{await act("goal_add",{match:m.id,goal:g})}catch(e){toast(errText(e));DATA.rev=0}}
+function seasonStats(){const st={};allPlayers().forEach(p=>st[p.id]={id:p.id,gone:!!p.gone,games:0,min:0,keep:0,goals:0});
+  const rec={p:0,w:0,d:0,l:0,f:0,a:0};
+  matches().forEach(m=>{const p=m.state&&m.state.plan;
+    if(played(m)){if(p&&p.grid)p.ids.forEach((id,i)=>{const s=st[id];if(!s)return;s.games++;s.min+=p.grid[i].filter(v=>v>0).length*U;s.keep+=p.keepers.filter(k=>k===id).length});
+      const g=m.goals||[],w=g.filter(x=>x.side==="wij").length,z=g.filter(x=>x.side==="zij").length;rec.p++;rec.f+=w;rec.a+=z;if(w>z)rec.w++;else if(w===z)rec.d++;else rec.l++}
+    (m.goals||[]).forEach(g=>{if(g.side==="wij"&&g.player&&st[g.player])st[g.player].goals++})});
+  return {rows:Object.values(st).filter(s=>!s.gone||s.games||s.goals),rec}}
+function renderGoals(){
+  const el=$("#v-goals");if(!S){noMatch(el);return}
+  const m=curMatch(),staff=canEdit(m),sc=score(m),goals=(m.goals||[]).slice();
+  goals.sort((a,b)=>(a.minute==null?999:a.minute)-(b.minute==null?999:b.minute)||String(a.at).localeCompare(String(b.at)));
+  const me=DATA.team.name,op=m.opponent||"Tegenstander";
+  let h=matchBar()+closedBar(m)+`<div class="board"><div class="side">${esc(m.home?me:op)}</div><div class="nums">${sc[0]}<span>–</span>${sc[1]}</div><div class="side">${esc(m.home?op:me)}</div>
+    <div class="when">${fmtDate(m.match_date,true)}${m.kickoff?" · "+esc(m.kickoff):""} · ${m.home?"thuis":"uit"}</div></div>`;
+  if(staff){const pl=(P()&&P().v===3?P().ids:S.players.filter(x=>x.present).map(x=>x.id));const mi=goalMinute();
+    h+=`<div class="card"><div class="q-title">Wie scoorde?</div>
+      <div class="goalgrid">${pl.map(id=>`<button type="button" class="goalbtn" data-goal="${id}">⚽ ${esc(nameOf(id))}</button>`).join("")}</div>
+      <div class="row"><button type="button" class="btn" data-goal="">⚽ Weet ik niet</button><button type="button" class="btn danger" id="against">Tegendoelpunt</button></div>
+      <p class="note">${mi?`Wordt genoteerd in minuut ${mi} (van de wedstrijdklok).`:"De klok loopt niet, dus er wordt geen minuut genoteerd."}</p></div>`}
+  h+=`<h2>Doelpunten deze wedstrijd</h2>`;const cb=closeBtn(m);
+  const scorers=activePlayers().filter(p=>!(P()&&P().v===3)||P().ids.includes(p.id)||goals.some(g=>g.player===p.id));
+  h+=goals.length?`<div class="card glist">${goals.map(g=>goalEdit===g.id&&staff?`<form class="grow gedit" data-gform="${g.id}">
+      <input type="number" class="txt gmin-in" id="gm-${g.id}" min="1" max="${MATCH}" inputmode="numeric" value="${g.minute||""}" placeholder="min" aria-label="Minuut">
+      ${g.side==="wij"?`<select id="gp-${g.id}" aria-label="Scorer"><option value="">Weet ik niet</option>${scorers.map(p=>`<option value="${p.id}"${g.player===p.id?" selected":""}>${esc(nameOf(p.id))}</option>`).join("")}</select>`:`<span class="gname">Tegendoelpunt</span>`}
+      <button type="submit" class="btn primary">Opslaan</button><button type="button" class="btn" data-gcancel="1">×</button></form>`
+    :`<div class="grow ${g.side}"><span class="gmin">${g.minute?g.minute+"'":"–"}</span><span class="gname">${g.side==="wij"?`⚽ ${esc(g.player?nameOf(g.player):"Doelpunt "+me)}`:`Tegendoelpunt ${esc(op)}`}</span>
+      ${staff?`<button type="button" class="x" data-gedit="${g.id}" aria-label="Wijzig tijd">✏️</button><button type="button" class="x" data-gdel="${g.id}" aria-label="Verwijder">${delArm==="g"+g.id?"Zeker?":"×"}</button>`:""}</div>`).join("")}</div>
+    ${staff?`<p class="note">Tik op ✏️ om de minuut of de scorer aan te passen.</p>`:""}`:`<p class="note">Nog geen doelpunten.</p>`;
+  if(cb)h+=`<div class="card"><div class="note">Klaar met invullen? Rond de wedstrijd af, dan staan uitslag, indeling en aanwezigheid vast.</div>${cb}</div>`;
+  const {rows,rec}=seasonStats();const top=rows.filter(r=>r.goals>0).sort((a,b)=>b.goals-a.goals||nameOf(a.id).localeCompare(nameOf(b.id)));
+  h+=`<h2>Seizoen</h2><div class="statrow"><div><b>${rec.p}</b><span>gespeeld</span></div><div><b>${rec.w}</b><span>gewonnen</span></div><div><b>${rec.d}</b><span>gelijk</span></div><div><b>${rec.l}</b><span>verloren</span></div><div><b>${rec.f}–${rec.a}</b><span>doelpunten</span></div></div>`;
+  h+=`<h2>Topscorers</h2>`+(top.length?`<div class="gridwrap"><table class="tt"><thead><tr><th>Speler</th><th>⚽ Goals</th></tr></thead><tbody>${top.map(r=>`<tr><td>${esc(nameOf(r.id))}</td><td>${r.goals}</td></tr>`).join("")}</tbody></table></div>`:`<p class="note">Nog geen doelpunten dit seizoen.</p>`);
+  el.innerHTML=h;bindMatchBar();bindClose(el);
+  el.querySelectorAll("[data-goal]").forEach(b=>b.onclick=()=>addGoal("wij",b.dataset.goal||null));
+  const ag=$("#against");if(ag)ag.onclick=()=>addGoal("zij",null);
+  el.querySelectorAll("[data-gedit]").forEach(b=>b.onclick=()=>{goalEdit=b.dataset.gedit;renderGoals();const i=$("#gm-"+goalEdit);if(i)i.focus()});
+  el.querySelectorAll("[data-gcancel]").forEach(b=>b.onclick=()=>{goalEdit=null;renderGoals()});
+  el.querySelectorAll("[data-gform]").forEach(f=>f.onsubmit=async e=>{e.preventDefault();const id=f.dataset.gform,g=m.goals.find(x=>x.id===id);if(!g)return;
+    const v=parseInt($("#gm-"+id).value,10),mi=isNaN(v)?null:Math.max(1,Math.min(MATCH,v));const ps=$("#gp-"+id);const pl=ps?(ps.value||null):g.player;
+    g.minute=mi;g.player=pl;goalEdit=null;document.activeElement&&document.activeElement.blur();renderGoals();
+    inflight++;localSeq++;try{await rpc("app_goal_update",{p_token:AUTH.token,p_match:m.id,p_goal:{id,minute:mi,player:pl}});toast("Doelpunt aangepast")}
+    catch(er){toast(errText(er));DATA.rev=0}finally{inflight--;setTimeout(()=>poll(true),30)}});
+  el.querySelectorAll("[data-gdel]").forEach(b=>b.onclick=async()=>{const id=b.dataset.gdel;if(delArm!=="g"+id){arm("g"+id);renderGoals();return}
+    delArm=null;m.goals=m.goals.filter(g=>g.id!==id);renderGoals();try{await act("goal_delete",{match:m.id,goal:id});toast("Doelpunt verwijderd")}catch(e){toast(errText(e));DATA.rev=0}});
+}
+
+/* ---------- team ---------- */
+function inviteText(){return `Hoi! Voor ${DATA.team.name} gebruiken de trainers en teammanagers een app voor de wedstrijden: aanwezigheid, wisselschema, wedstrijdklok en doelpunten.\n1. Open ${PAGE_URL}#team-${DATA.team.id}\n2. Vul je naam in, kies trainer/coach of teammanager en vraag toegang aan\n3. Na goedkeuring kun je meteen aan de slag`}
+function renderTeam(){
+  const el=$("#v-team"),staff=isStaff(),adm=isAdmin(),set=settings(),pl=activePlayers(),me=DATA.me,kids=me.child_ids||[];
+  const viewer=me.role==="viewer";
+  let h=viewer?"":`<h2>Mijn account</h2><div class="card"><div class="lockrow"><div><div class="q-title">${esc(me.name)}</div><div class="note">${ROLE[me.role]}${adm?" · beheerder":""} bij ${esc(DATA.team.name)}</div></div>
+      <div class="row"><button type="button" class="btn" id="logout">${delArm==="logout"?"Zeker? Tik nogmaals":"Uitloggen"}</button></div></div>
+</div>`;
+  if(adm){const rq=DATA.requests||[];
+    h=`<h2>Aanvragen${rq.length?` (${rq.length})`:""}</h2>`+(rq.length?rq.map(x=>`<div class="card req"><div class="lockrow"><div><div class="q-title">${esc(x.name)}</div>
+        <div class="note">Wil ${ROLE[x.role].toLowerCase()} zijn · ${fmtAgo(x.created_at)}</div>
+        ${(DATA.members||[]).some(m=>m.name.toLowerCase()===x.name.toLowerCase())?`<div class="note">Er is al een lid met deze naam. Accepteren koppelt deze telefoon aan dat account.</div>`:""}</div></div>
+      <div class="row"><select data-reqrole="${x.id}" aria-label="Rol voor ${esc(x.name)}">${["coach","manager"].map(r=>`<option value="${r}"${x.role===r?" selected":""}>${ROLE[r]}</option>`).join("")}</select>
+        <button type="button" class="btn primary" data-approve="${x.id}">✓ Accepteren</button><button type="button" class="btn danger" data-reject="${x.id}">${delArm==="rj"+x.id?"Zeker?":"Weigeren"}</button></div></div>`).join("")
+      :`<p class="note">Geen open aanvragen. Nieuwe aanvragen verschijnen hier en je krijgt een melding in de app.</p>`)+h}
+  if(staff){
+    h+=`<h2>Uitnodigen</h2><div class="card">
+      <div class="row"><button type="button" class="btn primary" data-inv="1">Kopieer uitnodiging voor trainers</button></div>
+      <p class="note">Iedereen vraagt zelf toegang aan. ${adm?"Jij":"De beheerder"} keurt de aanvraag goed. De app is alleen voor trainers, coaches en teammanagers.</p></div>`}
+  if(adm)h+=`<h2>Beheerderscode</h2><div class="card"><div class="code">${esc(DATA.admin_code||"")}</div>
+      <div class="row"><button type="button" class="btn" data-newcode="1">${delArm==="cadmin"?"Zeker? De oude code werkt dan niet meer":"Nieuwe code"}</button></div>
+      <p class="note">Hou deze code voor jezelf. Met deze code kom je zonder goedkeuring binnen, bijvoorbeeld op een nieuwe telefoon.</p></div>`;
+  if(staff){
+    h+=`<h2>Spelers (${pl.length})</h2><div class="card">${pl.map(p=>`<div class="pl">
+        <input type="text" id="nm-${p.id}" value="${esc(p.name)}" data-id="${p.id}" aria-label="Naam">
+        <button type="button" class="chip-t kp" data-kp="${p.id}" aria-pressed="${p.canKeep!==false}">🧤 Keept</button>
+        <button type="button" class="x" data-del="${p.id}" aria-label="Verwijder ${esc(p.name)}">${delArm==="p"+p.id?"Zeker?":"×"}</button><span></span></div>`).join("")}
+      <form id="addf" class="row"><input class="txt" id="addn" placeholder="Naam nieuwe speler" style="flex:1;min-width:0"><button class="btn" type="submit">Toevoegen</button></form>
+      <p class="note">Zet 🧤 uit voor kinderen die niet willen keepen.</p></div>
+    <h2>Nooit samen op de bank</h2><div class="card"><div class="two">
+      <div class="field"><label for="pa">Speler 1</label><select id="pa"><option value="">Niemand</option>${pl.map(p=>`<option value="${p.id}"${(set.pair||[])[0]===p.id?" selected":""}>${esc(p.name)}</option>`).join("")}</select></div>
+      <div class="field"><label for="pb">Speler 2</label><select id="pb"><option value="">Niemand</option>${pl.map(p=>`<option value="${p.id}"${(set.pair||[])[1]===p.id?" selected":""}>${esc(p.name)}</option>`).join("")}</select></div></div>
+      <p class="note">Samen op de bank mag niet. Samen in het veld gebeurt zoveel mogelijk aan het eind. Keept de een, dan speelt de ander dat kwart.</p></div>
+    <h2>Wedstrijdvorm</h2><div class="card">
+      <div class="field"><label>Spelers in het veld (met keeper)</label><div class="seg">${[5,6,7,8].map(n=>`<button type="button" data-fs="${n}" aria-pressed="${(set.fieldSize||6)===n}">${n}</button>`).join("")}</div></div>
+      <p class="note">4 kwarten van 10 minuten. Keeper wisselt in de pauze, spelers wisselen elke 5 minuten.</p></div>`;
+  }else{
+    h+=`<h2>Spelers (${pl.length})</h2><div class="card"><div class="chips">${pl.map(p=>`<span class="chip">${esc(nameOf(p.id))}</span>`).join("")}</div></div>`;
+  }
+  const {rows}=seasonStats();
+  h+=`<h2>Seizoen per speler</h2><div class="gridwrap"><table class="tt"><thead><tr><th>Speler</th><th>Wedstr.</th><th>Min.</th><th>🧤 Kw.</th><th>⚽</th></tr></thead><tbody>
+    ${rows.sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id))).map(r=>`<tr><td>${esc(nameOf(r.id))}</td><td>${r.games}</td><td>${r.min}</td><td>${r.keep}</td><td>${r.goals}</td></tr>`).join("")}</tbody></table></div>`;
+  if(viewer){const mem=DATA.members||[];h+=`<h2>Leden (${mem.length})</h2><div class="card">${mem.map(x=>`<div class="mrow"><div class="mi"><b>${esc(x.name)}${x.is_admin?` <span class="adm">beheerder</span>`:""}</b></div><span class="chip bench">${ROLE[x.role]}</span><span></span><span></span></div>`).join("")||`<p class="note">Nog geen leden.</p>`}</div>`}
+  if(staff){const mem=DATA.members||[];
+    h+=`<h2>Leden (${mem.length})</h2><div class="card">${mem.map(x=>`<div class="mrow"><div class="mi"><b>${esc(x.name)}${x.is_admin?` <span class="adm">beheerder</span>`:""}</b>${x.id===me.id?" (jij)":""}<span class="note">${(x.child_ids||[]).map(id=>esc(nameOf(id))).join(", ")}</span></div>
+      ${adm?`<select data-role="${x.id}" aria-label="Rol van ${esc(x.name)}">${["manager","coach"].concat(x.role==="ouder"?["ouder"]:[]).map(r=>`<option value="${r}"${x.role===r?" selected":""}>${ROLE[r]}</option>`).join("")}</select>
+      ${x.id!==me.id?`<button type="button" class="x" data-mrem="${x.id}" aria-label="Verwijder ${esc(x.name)}">${delArm==="r"+x.id?"Zeker?":"×"}</button>`:"<span></span>"}
+      <button type="button" class="chip-t kp mad" data-madm="${x.id}" aria-pressed="${!!x.is_admin}">Beheerder</button>`:`<span class="chip bench">${ROLE[x.role]}</span><span></span>`}</div>`).join("")}
+      <p class="note">${adm?"Als beheerder kun je rollen wijzigen, beheerders aanwijzen en leden verwijderen.":"Alleen de beheerder kan rollen wijzigen."}</p></div>`}
+  if(me.is_super){const cr=CLUB&&CLUB!=="err"&&(CLUB.requests||[]).length;h=cr?renderClub()+h:h+renderClub()}
+  el.innerHTML=h;
+  const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  if(me.is_super)bindClub(el);
+  on("#logout",async()=>{if(delArm!=="logout"){arm("logout");renderTeam();return}delArm=null;try{await rpc("app_act",{p_token:AUTH.token,p_action:"logout",p_data:{}})}catch(e){}localLogout("Je bent uitgelogd")});
+  el.querySelectorAll("[data-kid]").forEach(b=>b.onclick=async()=>{const id=b.dataset.kid;let k=(DATA.me.child_ids||[]).slice();k=k.includes(id)?k.filter(x=>x!==id):k.concat([id]);
+    DATA.me.child_ids=k;renderTeam();try{await act("me_children",{child_ids:k});toast(k.length?"Opgeslagen":"Geen kind gekozen")}catch(e){toast(errText(e));DATA.rev=0}});
+  el.querySelectorAll("[data-inv]").forEach(b=>b.onclick=()=>copyText(inviteText(),"Uitnodiging gekopieerd. Plak hem in WhatsApp."));
+  el.querySelectorAll("[data-newcode]").forEach(b=>b.onclick=async()=>{if(delArm!=="cadmin"){arm("cadmin",4000);renderTeam();return}delArm=null;
+    try{await act("codes_new",{});toast("Nieuwe beheerderscode gemaakt")}catch(e){toast(errText(e))}});
+  el.querySelectorAll("[data-approve]").forEach(b=>b.onclick=async()=>{const id=b.dataset.approve,role=el.querySelector(`[data-reqrole="${id}"]`).value,x=(DATA.requests||[]).find(r=>r.id===id);
+    DATA.requests=(DATA.requests||[]).filter(r=>r.id!==id);renderTeam();
+    try{await act("approve",{member:id,role});toast(`${x?x.name:"Lid"} is geaccepteerd als ${ROLE[role].toLowerCase()}`)}catch(e){toast(errText(e));DATA.rev=0}});
+  el.querySelectorAll("[data-reject]").forEach(b=>b.onclick=async()=>{const id=b.dataset.reject;if(delArm!=="rj"+id){arm("rj"+id);renderTeam();return}delArm=null;
+    DATA.requests=(DATA.requests||[]).filter(r=>r.id!==id);renderTeam();try{await act("reject",{member:id});toast("Aanvraag geweigerd")}catch(e){toast(errText(e));DATA.rev=0}});
+  el.querySelectorAll("[data-madm]").forEach(b=>b.onclick=async()=>{const id=b.dataset.madm,v=b.getAttribute("aria-pressed")!=="true";
+    try{await act("member_admin",{member:id,value:v});toast(v?"Beheerder gemaakt":"Geen beheerder meer")}catch(e){toast(errText(e))}});
+  const cloneSet=()=>JSON.parse(JSON.stringify(settings()));
+  el.querySelectorAll("input[data-id]").forEach(i=>i.onchange=()=>{const s=cloneSet(),p=s.players.find(x=>x.id===i.dataset.id),v=i.value.trim();if(!v){i.value=p.name;return}p.name=v;saveSettings(s)});
+  el.querySelectorAll("[data-kp]").forEach(x=>x.onclick=()=>{const s=cloneSet(),p=s.players.find(y=>y.id===x.dataset.kp);p.canKeep=p.canKeep===false;saveSettings(s);renderTeam()});
+  el.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{const id=x.dataset.del;if(delArm!=="p"+id){arm("p"+id);renderTeam();return}delArm=null;
+    const s=cloneSet();s.players.find(y=>y.id===id).gone=true;s.pair=(s.pair||[]).map(y=>y===id?null:y);saveSettings(s);renderTeam();toast("Speler verwijderd. Oude statistieken blijven bewaard.")});
+  const af=$("#addf");if(af)af.onsubmit=e=>{e.preventDefault();const v=$("#addn").value.trim();if(!v)return;const s=cloneSet();s.nextId=s.nextId||1;
+    let id;do{id="p"+(s.nextId++)}while(s.players.some(p=>p.id===id));s.players.push({id,name:v,canKeep:true});saveSettings(s);renderTeam();toast(v+" toegevoegd")};
+  const pa=$("#pa"),pb=$("#pb");if(pa){const f=()=>{const s=cloneSet();s.pair=[pa.value||null,pb.value||null];saveSettings(s)};pa.onchange=f;pb.onchange=f}
+  el.querySelectorAll("[data-fs]").forEach(x=>x.onclick=()=>{const s=cloneSet();s.fieldSize=+x.dataset.fs;saveSettings(s);renderTeam()});
+  el.querySelectorAll("[data-role]").forEach(s=>s.onchange=async()=>{try{await act("member_role",{member:s.dataset.role,role:s.value});toast("Rol gewijzigd")}catch(e){toast(errText(e));DATA.rev=0;renderTeam()}});
+  el.querySelectorAll("[data-mrem]").forEach(b=>b.onclick=async()=>{const id=b.dataset.mrem;if(delArm!=="r"+id){arm("r"+id);renderTeam();return}delArm=null;
+    try{await act("member_remove",{member:id});toast("Lid verwijderd")}catch(e){toast(errText(e))}});
+}
+
+function renderPending(){const el=$("#v-agenda"),me=DATA.me;
+  el.innerHTML=`<div class="hero"><div class="big">Even geduld</div><div class="sub">${DATA.new_team?`${esc(DATA.team.name)} gebruikt de app nog niet. Je aanvraag is verstuurd naar de clubbeheerder. Na goedkeuring ben jij de beheerder van dit team.`:`Je aanvraag is verstuurd naar de beheerder van ${esc(DATA.team.name)}.`}</div></div>
+    <div class="card"><div class="lockrow"><div><div class="q-title">${esc(me.name)}</div><div class="note">${ROLE[me.role]}${me.note?" · ouder van "+esc(me.note):""}</div></div><span class="badge wait">Wacht op goedkeuring</span></div>
+    <p class="note">Laat deze app open of kom later terug. Zodra je bent geaccepteerd, gaat de app vanzelf open.</p>
+    <div class="row"><button type="button" class="btn" id="pcancel">${delArm==="pc"?"Zeker? Tik nogmaals":"Aanvraag intrekken"}</button></div></div>`;
+  $("#pcancel").onclick=async()=>{if(delArm!=="pc"){arm("pc");renderPending();return}delArm=null;try{await rpc("app_act",{p_token:AUTH.token,p_action:"logout",p_data:{}})}catch(e){}localLogout("Aanvraag ingetrokken")}}
+
+/* ---------- clubbeheer ---------- */
+let CLUB=null,clubLoading=false;
+async function loadClub(){if(clubLoading)return;clubLoading=true;try{CLUB=await rpc("app_club",{p_token:AUTH.token,p_action:"list",p_data:{}})}catch(e){CLUB="err"}clubLoading=false;if(view==="team"&&!(document.activeElement&&document.activeElement.id==="clubname"))renderTeam()}
+async function club(a,d){try{await rpc("app_club",{p_token:AUTH.token,p_action:a,p_data:d||{}});return true}catch(e){toast(errText(e));return false}finally{loadClub()}}
+function renderClub(){
+  if(CLUB===null){loadClub();return `<h2>Clubbeheer</h2><p class="note">Laden…</p>`}
+  if(CLUB==="err")return `<h2>Clubbeheer</h2><p class="note">Kon de teams niet laden.</p>`;
+  const rq=CLUB.requests||[];
+  let h=`<h2>Clubbeheer · nieuwe teams${rq.length?` (${rq.length})`:""}</h2>`;
+  h+=rq.length?rq.map(x=>`<div class="card req"><div class="q-title">${esc(x.name)}</div><div class="note">Wil beheerder worden van <b>${esc(x.team)}</b> als ${ROLE[x.role].toLowerCase()}${x.note?" · ouder van "+esc(x.note):""} · ${fmtAgo(x.created_at)}</div>
+      <div class="row"><button type="button" class="btn primary" data-capprove="${x.id}">✓ Accepteren als beheerder</button><button type="button" class="btn danger" data-creject="${x.id}">${delArm==="cr"+x.id?"Zeker?":"Weigeren"}</button></div></div>`).join("")
+    :`<p class="note">Geen aanvragen voor nieuwe teams. Teams zonder beheerder komen hier binnen. Daarna keurt de teambeheerder zelf de leden goed.</p>`;
+  h+=`<div class="card">${(CLUB.teams||[]).map(t=>`<button type="button" class="trow" data-viewteam="${t.id}"><span class="crest sm${t.in_use?" used":""}">${t.in_use?"✓":esc(initials(t.name))}</span><div class="mi"><b>${esc(t.name)}${t.id===AUTH.team_id?" (jouw team)":""}</b><span class="note">${t.in_use?`${t.members} leden · beheer: ${esc(t.admins)}`:"Nog niet in gebruik"}</span></div><span class="chev">›</span></button>`).join("")}
+    <p class="note">Tik op een team om mee te kijken. Je kunt daar niets aanpassen.</p>
+    <form id="clubadd" class="row"><input class="txt" id="clubname" placeholder="Nieuw team, bijv. SDW O9-1" style="flex:1;min-width:0"><button class="btn" type="submit">Toevoegen</button></form></div>`;
+  return h}
+function bindClub(el){
+  el.querySelectorAll("[data-viewteam]").forEach(b=>b.onclick=()=>{const t=(CLUB.teams||[]).find(x=>x.id===b.dataset.viewteam);if(t)enterView(t)});
+  el.querySelectorAll("[data-capprove]").forEach(b=>b.onclick=async()=>{b.disabled=true;if(await club("approve",{member:b.dataset.capprove}))toast("Geaccepteerd. Diegene is nu beheerder van het team.")});
+  el.querySelectorAll("[data-creject]").forEach(b=>b.onclick=async()=>{const id=b.dataset.creject;if(delArm!=="cr"+id){arm("cr"+id);renderTeam();return}delArm=null;if(await club("reject",{member:id}))toast("Aanvraag geweigerd")});
+  const f=$("#clubadd");if(f)f.onsubmit=async e=>{e.preventDefault();const n=$("#clubname").value.trim();if(!n)return;$("#clubname").value="";$("#clubname").blur();if(await club("add_team",{name:n}))toast(n+" toegevoegd")};
+}
+
+function enterView(t){if(t.id===AUTH.team_id){exitView();return}VIEW={id:t.id,name:t.name};DATA=null;S=null;CUR=null;flashU=null;view="agenda";show("agenda");poll(true)}
+function exitView(){VIEW=null;DATA=ls.get(CACHEKEY);CUR=ls.get(CURKEY);if(DATA&&!DATA.pending){ensureCur();buildS();lastMs=S?matchMs():0}else S=null;show("team");poll(true)}
+
+/* ---------- update-melding ---------- */
+let updateShown=false;
+async function checkVersion(){if(updateShown||location.protocol==="file:")return;
+  try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+    if(j.version&&j.version!==APP_VERSION){updateShown=true;const m=$("#upd");$("#updv").textContent=j.version;if(j.notes)$("#updn").textContent=j.notes;m.hidden=false;$("#updgo").focus()}}catch(e){}}
+async function doUpdate(){const b=$("#updgo");b.disabled=true;b.textContent="Bezig…";
+  try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}
+  try{const regs=navigator.serviceWorker?await navigator.serviceWorker.getRegistrations():[];await Promise.all(regs.map(r=>r.update().catch(()=>{})))}catch(e){}
+  location.reload()}
+
+/* ---------- navigatie ---------- */
+const VIEWS=["agenda","plan","live","goals","team"];
+function show(v,keep){
+  const gateOn=!AUTH;
+  $("#tabs").hidden=gateOn;$("#v-gate").hidden=!gateOn;
+  if(gateOn){VIEW=null;$("#viewbar").hidden=true;VIEWS.forEach(k=>$("#v-"+k).hidden=true);$("#hname").textContent="Wisselschema";$("#hsub").textContent="Kies je team en meld je aan";$("#crest").textContent="⚽";$("#sync").hidden=true;renderGate();if(!keep)window.scrollTo(0,0);return}
+  $("#sync").hidden=false;
+  $("#viewbar").hidden=!VIEW;if(VIEW)$("#viewname").textContent=VIEW.name;
+  if(!DATA){VIEWS.forEach(k=>$("#v-"+k).hidden=k!=="agenda");$("#v-agenda").innerHTML=`<div class="summary"><div class="big">Laden…</div></div>`;$("#hname").textContent=AUTH.team_name||"";$("#hsub").textContent="Gegevens ophalen…";return}
+  if(DATA.pending){$("#tabs").hidden=true;VIEWS.forEach(k=>$("#v-"+k).hidden=k!=="agenda");$("#hname").textContent=DATA.team.name;$("#crest").textContent=initials(DATA.team.name);
+    $("#hsub").textContent=`${DATA.me.name} · wacht op goedkeuring`;renderPending();return}
+  view=v;VIEWS.forEach(k=>{$("#v-"+k).hidden=k!==v;$("#t-"+k).setAttribute("aria-selected",k===v)});
+  $("#viewbar").hidden=!VIEW;if(VIEW)$("#viewname").textContent=VIEW.name;
+  const nr=(DATA.requests||[]).length;$("#t-team").innerHTML="Team"+(nr?`<span class="dot">${nr}</span>`:"");
+  $("#hname").textContent=DATA.team.name;$("#crest").textContent=initials(DATA.team.name);
+  $("#hsub").textContent=`${DATA.me.name} · ${ROLE[DATA.me.role]}`;
+  if(v==="team"&&!keep)CLUB=null;
+  ({agenda:renderAgenda,plan:renderPlan,live:renderLive,goals:renderGoals,team:renderTeam})[v]();
+  if(!keep)window.scrollTo(0,0)}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){poll(true);if(S&&S.live.startedAt){try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}}}});
+
+/* ---------- start ---------- */
+AUTH=ls.get(AUTHKEY);CUR=ls.get(CURKEY);
+const hm=location.hash.match(/team-([0-9a-f-]{36})/);
+if(AUTH){DATA=ls.get(CACHEKEY);if(DATA&&(!DATA.team||DATA.team.id!==AUTH.team_id))DATA=null;
+  if(DATA&&!DATA.pending){ensureCur();buildS();lastMs=S?matchMs():0}
+  if(hm&&hm[1]!==AUTH.team_id)toast("Je bent aangemeld bij een ander team. Log uit bij Team om te wisselen.");
+  try{history.replaceState(null,"",location.pathname)}catch(e){}
+  show("agenda");poll(true)}
+else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
+    rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
+  show("agenda")}
+setInterval(()=>poll(),3000);setInterval(tick,250);
+$("#ver").textContent="v"+APP_VERSION;$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
+checkVersion();setInterval(checkVersion,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+</script>
+</body>
+</html>
