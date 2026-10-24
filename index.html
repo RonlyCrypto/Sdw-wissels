@@ -286,7 +286,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.5.0";
+const APP_VERSION="2.6.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const PAGE_URL="https://ronlycrypto.github.io/Sdw-wissels/";
 const U=5, N=8, QU=2, Q=4, MATCH=N*U;
@@ -482,7 +482,7 @@ function renderGate(){
   if(gate.step==="teams"){
     if(gate.teams===null){el.innerHTML=`<div class="summary"><div class="big">Teams laden…</div></div>`;loadTeams();return}
     if(gate.teams==="err"){el.innerHTML=`<div class="summary"><div class="big">Geen verbinding</div><div class="sub">Je hebt internet nodig om je aan te melden.</div><div class="row"><button class="btn" id="gretry" type="button">Opnieuw</button></div></div>`;$("#gretry").onclick=()=>{gate.teams=null;renderGate()};return}
-    h=`<div class="hero"><div class="big">Kies je team</div><div class="sub">Daarna vraag je toegang aan. De beheerder van het team keurt je goed.</div></div>
+    h=`${location.hash==="#club"?`<div class="alert keep"><div class="h">Welkom!</div><div>Kies hieronder je eigen team en vraag toegang aan als teammanager of trainer/coach.</div></div>`:""}<div class="hero"><div class="big">Kies je team</div><div class="sub">Daarna vraag je toegang aan. De beheerder van het team keurt je goed.</div></div>
       <div class="teamlist">${gate.teams.map(t=>`<button type="button" class="teambtn" data-team="${t.id}"><span class="crest sm${t.in_use?" used":""}">${t.in_use?"✓":esc(initials(t.name))}</span><span>${esc(t.name)}<small>${t.in_use?"In gebruik":"Nog niet in gebruik"}</small></span><span class="chev">›</span></button>`).join("")||`<p class="note">Er zijn nog geen teams.</p>`}</div>
       <p class="note">✓ betekent dat het team de app al gebruikt. Staat je team er niet bij? Vraag de clubbeheerder om het toe te voegen.</p>`;
   }else if(gate.step==="join"){
@@ -827,6 +827,7 @@ function renderGoals(){
 }
 
 /* ---------- team ---------- */
+function clubInviteText(){return `Hoi! Bij SDW gebruiken we een app voor de jeugdwedstrijden: aanwezigheid, eerlijk wisselschema, wedstrijdklok en doelpunten. Gratis en zonder reclame.\n1. Open ${PAGE_URL}#club\n2. Kies je team. Staat er nog geen ✓ bij, dan is jouw team de eerste.\n3. Vul je naam in, kies teammanager of trainer/coach en vraag toegang aan\n4. Na goedkeuring ben jij beheerder van je team en keur jij je eigen trainers goed`}
 function inviteText(){return `Hoi! Voor ${DATA.team.name} gebruiken de trainers en teammanagers een app voor de wedstrijden: aanwezigheid, wisselschema, wedstrijdklok en doelpunten.\n1. Open ${PAGE_URL}#team-${DATA.team.id}\n2. Vul je naam in, kies trainer/coach of teammanager en vraag toegang aan\n3. Na goedkeuring kun je meteen aan de slag`}
 function renderTeam(){
   const el=$("#v-team"),staff=isStaff(),adm=isAdmin(),set=settings(),pl=activePlayers(),me=DATA.me,kids=me.child_ids||[];
@@ -843,8 +844,9 @@ function renderTeam(){
       :`<p class="note">Geen open aanvragen. Nieuwe aanvragen verschijnen hier en je krijgt een melding in de app.</p>`)+h}
   if(staff){
     h+=`<h2>Uitnodigen</h2><div class="card">
-      <div class="row"><button type="button" class="btn primary" data-inv="1">Kopieer uitnodiging voor trainers</button></div>
-      <p class="note">Iedereen vraagt zelf toegang aan. ${adm?"Jij":"De beheerder"} keurt de aanvraag goed. De app is alleen voor trainers, coaches en teammanagers.</p></div>`}
+      <div class="row"><button type="button" class="btn primary" data-inv="1">Kopieer uitnodiging voor ${esc(DATA.team.name)}</button></div>
+      ${me.is_super?`<div class="row"><button type="button" class="btn" data-clubinv="1">Kopieer uitnodiging voor andere teams</button></div>`:""}
+      <p class="note">De eerste link is voor trainers van ${esc(DATA.team.name)}: ${adm?"jij":"de beheerder"} keurt hun aanvraag goed.${me.is_super?" De tweede is voor teammanagers en trainers van andere teams: zij kiezen hun eigen team, en de eerste aanvraag van een nieuw team komt bij jou binnen.":""}</p></div>`}
   if(adm)h+=`<h2>Beheerderscode</h2><div class="card"><div class="code">${esc(DATA.admin_code||"")}</div>
       <div class="row"><button type="button" class="btn" data-newcode="1">${delArm==="cadmin"?"Zeker? De oude code werkt dan niet meer":"Nieuwe code"}</button></div>
       <p class="note">Hou deze code voor jezelf. Met deze code kom je zonder goedkeuring binnen, bijvoorbeeld op een nieuwe telefoon.</p></div>`;
@@ -883,6 +885,7 @@ function renderTeam(){
   on("#logout",async()=>{if(delArm!=="logout"){arm("logout");renderTeam();return}delArm=null;try{await rpc("app_act",{p_token:AUTH.token,p_action:"logout",p_data:{}})}catch(e){}localLogout("Je bent uitgelogd")});
   el.querySelectorAll("[data-kid]").forEach(b=>b.onclick=async()=>{const id=b.dataset.kid;let k=(DATA.me.child_ids||[]).slice();k=k.includes(id)?k.filter(x=>x!==id):k.concat([id]);
     DATA.me.child_ids=k;renderTeam();try{await act("me_children",{child_ids:k});toast(k.length?"Opgeslagen":"Geen kind gekozen")}catch(e){toast(errText(e));DATA.rev=0}});
+  el.querySelectorAll("[data-clubinv]").forEach(b=>b.onclick=()=>copyText(clubInviteText(),"Uitnodiging voor andere teams gekopieerd"));
   el.querySelectorAll("[data-inv]").forEach(b=>b.onclick=()=>copyText(inviteText(),"Uitnodiging gekopieerd. Plak hem in WhatsApp."));
   el.querySelectorAll("[data-newcode]").forEach(b=>b.onclick=async()=>{if(delArm!=="cadmin"){arm("cadmin",4000);renderTeam();return}delArm=null;
     try{await act("codes_new",{});toast("Nieuwe beheerderscode gemaakt")}catch(e){toast(errText(e))}});
