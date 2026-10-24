@@ -253,6 +253,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .installbar .vin{padding-block:8px}
 .installbar .btn{padding:6px 12px;font-size:14px;background:var(--pitch);color:#fff;border-color:var(--pitch)}
 .installbar .x{color:var(--muted)}
+.linkbtn.danger-link{color:var(--red);margin:0;align-self:flex-start}
 </style>
 
 </head>
@@ -292,7 +293,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.8.2";
+const APP_VERSION="2.8.3";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -545,7 +546,8 @@ function matchForm(m){m=m||{match_date:todayStr(),kickoff:"",opponent:"",home:tr
     <div class="field"><label for="mtime">Aftrap</label><input type="time" class="txt" id="mtime" value="${esc(m.kickoff)}"></div></div>
     <div class="field"><label for="mopp">Tegenstander</label><input class="txt" id="mopp" value="${esc(m.opponent)}" placeholder="Bijv. VVA O8-2"></div>
     <div class="field"><label>Waar</label><div class="seg"><button type="button" data-home="1" aria-pressed="${!!m.home}">Thuis</button><button type="button" data-home="0" aria-pressed="${!m.home}">Uit</button></div></div>
-    <div class="row"><button class="btn primary" type="submit">Opslaan</button><button class="btn" type="button" id="mcancel">Annuleer</button></div></form>`}
+    <div class="row"><button class="btn primary" type="submit">Opslaan</button><button class="btn" type="button" id="mcancel">Annuleer</button></div>
+    ${m.id?`<button type="button" class="linkbtn danger-link" data-mdel="${m.id}">${delArm==="m"+m.id?"Zeker? Tik nogmaals om deze wedstrijd te verwijderen":"Wedstrijd verwijderen"}</button>`:""}</form>`}
 function matchCard(m){
   const t=todayStr(),c=attCounts(m),sc=score(m),isOpen=!!openAtt[m.id],staff=canEdit(m);
   const kids=m.closed?[]:myKids();
@@ -557,7 +559,7 @@ function matchCard(m){
   if(isOpen)h+=`<div class="attlist">${activePlayers().map(p=>`<div class="attrow"><span>${esc(nameOf(p.id))}</span>${attSeg(m,p.id,staff||kids.includes(p.id))}</div>`).join("")}
     ${staff?`<p class="note">Niet ingevuld (?) telt in de indeling als aanwezig.</p>`:""}</div>`;
   h+=`<div class="row"><button class="btn primary" type="button" data-goplan="${m.id}">Indeling ›</button>${(m.goals||[]).length||played(m)?`<button class="btn" type="button" data-gogoals="${m.id}">⚽ Doelpunten</button>`:""}
-    ${staff?`<button class="btn" type="button" data-medit="${m.id}">Wijzig</button><button class="btn danger" type="button" data-mdel="${m.id}">${delArm==="m"+m.id?"Zeker? Tik nogmaals":"Verwijder"}</button>`:""}${closeBtn(m)}
+    ${staff?`<button class="btn" type="button" data-medit="${m.id}">Wijzig</button>`:""}${closeBtn(m)}
     ${m.closed&&isAdmin()?`<button type="button" class="btn" data-reopen="${m.id}">${delArm==="ro"+m.id?"Zeker?":"Heropenen"}</button>`:""}</div>`;
   if(agendaEdit===m.id)h+=matchForm(m);
   return h+`</div></article>`}
