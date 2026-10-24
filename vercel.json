@@ -1,0 +1,9 @@
+{
+  "installCommand": "echo geen-install-nodig",
+  "buildCommand": "mkdir -p dist && cp index.html sw.js manifest.webmanifest version.json icon-*.png dist/",
+  "outputDirectory": "dist",
+  "framework": null,
+  "headers": [
+    { "source": "/(sw.js|version.json|index.html|)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
