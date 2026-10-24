@@ -292,7 +292,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.8.0";
+const APP_VERSION="2.8.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -834,8 +834,8 @@ function renderGoals(){
 }
 
 /* ---------- team ---------- */
-function clubInviteText(){return `Hoi! Bij SDW gebruiken we een app voor de jeugdwedstrijden: aanwezigheid, eerlijk wisselschema, wedstrijdklok en doelpunten. Gratis en zonder reclame.\n1. Open ${PAGE_URL}#club in Chrome en tik op "Installeren" om de app op je startscherm te zetten\n2. Kies je team. Staat er nog geen ✓ bij, dan is jouw team de eerste.\n3. Vul je naam in, kies teammanager of trainer/coach en vraag toegang aan\n4. Na goedkeuring ben jij beheerder van je team en keur jij je eigen trainers goed`}
-function inviteText(){return `Hoi! Voor ${DATA.team.name} gebruiken de trainers en teammanagers een app voor de wedstrijden: aanwezigheid, wisselschema, wedstrijdklok en doelpunten.\n1. Open ${PAGE_URL}#team-${DATA.team.id} in Chrome en tik op "Installeren" om de app op je startscherm te zetten\n2. Vul je naam in, kies trainer/coach of teammanager en vraag toegang aan\n3. Na goedkeuring kun je meteen aan de slag. Zet bij Team ook de meldingen aan.`}
+function clubInviteText(){return `Hoi! Bij SDW gebruiken de trainers, coaches en teammanagers een app voor de jeugdwedstrijden: eerlijk wisselschema, wedstrijdklok en doelpunten. Gratis en zonder reclame.\n1. Open ${PAGE_URL}#club in Chrome en tik op "Installeren" om de app op je startscherm te zetten\n2. Kies je team. Staat er nog geen ✓ bij, dan is jouw team de eerste.\n3. Vul je naam in, kies teammanager of trainer/coach en vraag toegang aan\n4. Na goedkeuring ben jij beheerder van je team en keur jij de andere trainers, coaches en teammanagers goed`}
+function inviteText(){return `Hoi! Voor ${DATA.team.name} gebruiken de trainers, coaches en teammanagers een app voor de wedstrijden: wisselschema, wedstrijdklok en doelpunten.\n1. Open ${PAGE_URL}#team-${DATA.team.id} in Chrome en tik op "Installeren" om de app op je startscherm te zetten\n2. Vul je naam in, kies trainer/coach of teammanager en vraag toegang aan\n3. Na goedkeuring kun je meteen aan de slag. Zet bij Team ook de meldingen aan.`}
 function renderTeam(){
   const el=$("#v-team"),staff=isStaff(),adm=isAdmin(),set=settings(),pl=activePlayers(),me=DATA.me,kids=me.child_ids||[];
   const viewer=me.role==="viewer";
