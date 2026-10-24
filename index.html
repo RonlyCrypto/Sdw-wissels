@@ -248,6 +248,10 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .gedit .btn{padding:8px 12px}
 .grow .x{font-size:16px}
 .plist{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:2px}
+.installbar{background:var(--field-soft);color:var(--ink);border-bottom:1px solid var(--line)}
+.installbar .vin{padding-block:8px}
+.installbar .btn{padding:6px 12px;font-size:14px;background:var(--pitch);color:#fff;border-color:var(--pitch)}
+.installbar .x{color:var(--muted)}
 </style>
 
 </head>
@@ -264,6 +268,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
     <button role="tab" id="t-goals" aria-selected="false" data-v="goals">Goals</button>
     <button role="tab" id="t-team" aria-selected="false" data-v="team">Team</button>
   </div></nav>
+  <div id="install" class="installbar pad" hidden></div>
   <div id="viewbar" class="viewbar" hidden><div class="pad"><div class="vin"><span>👁 Je kijkt mee bij <b id="viewname"></b> · alleen lezen</span><button type="button" class="btn" id="viewback">‹ Mijn team</button></div></div></div>
 </header>
 
@@ -286,7 +291,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.6.0";
+const APP_VERSION="2.7.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const PAGE_URL="https://ronlycrypto.github.io/Sdw-wissels/";
 const U=5, N=8, QU=2, Q=4, MATCH=N*U;
@@ -827,8 +832,8 @@ function renderGoals(){
 }
 
 /* ---------- team ---------- */
-function clubInviteText(){return `Hoi! Bij SDW gebruiken we een app voor de jeugdwedstrijden: aanwezigheid, eerlijk wisselschema, wedstrijdklok en doelpunten. Gratis en zonder reclame.\n1. Open ${PAGE_URL}#club\n2. Kies je team. Staat er nog geen ✓ bij, dan is jouw team de eerste.\n3. Vul je naam in, kies teammanager of trainer/coach en vraag toegang aan\n4. Na goedkeuring ben jij beheerder van je team en keur jij je eigen trainers goed`}
-function inviteText(){return `Hoi! Voor ${DATA.team.name} gebruiken de trainers en teammanagers een app voor de wedstrijden: aanwezigheid, wisselschema, wedstrijdklok en doelpunten.\n1. Open ${PAGE_URL}#team-${DATA.team.id}\n2. Vul je naam in, kies trainer/coach of teammanager en vraag toegang aan\n3. Na goedkeuring kun je meteen aan de slag`}
+function clubInviteText(){return `Hoi! Bij SDW gebruiken we een app voor de jeugdwedstrijden: aanwezigheid, eerlijk wisselschema, wedstrijdklok en doelpunten. Gratis en zonder reclame.\n1. Open ${PAGE_URL}#club in Chrome en tik op "Installeren" om de app op je startscherm te zetten\n2. Kies je team. Staat er nog geen ✓ bij, dan is jouw team de eerste.\n3. Vul je naam in, kies teammanager of trainer/coach en vraag toegang aan\n4. Na goedkeuring ben jij beheerder van je team en keur jij je eigen trainers goed`}
+function inviteText(){return `Hoi! Voor ${DATA.team.name} gebruiken de trainers en teammanagers een app voor de wedstrijden: aanwezigheid, wisselschema, wedstrijdklok en doelpunten.\n1. Open ${PAGE_URL}#team-${DATA.team.id} in Chrome en tik op "Installeren" om de app op je startscherm te zetten\n2. Vul je naam in, kies trainer/coach of teammanager en vraag toegang aan\n3. Na goedkeuring kun je meteen aan de slag. Zet bij Team ook de meldingen aan.`}
 function renderTeam(){
   const el=$("#v-team"),staff=isStaff(),adm=isAdmin(),set=settings(),pl=activePlayers(),me=DATA.me,kids=me.child_ids||[];
   const viewer=me.role==="viewer";
@@ -982,6 +987,21 @@ function bindPush(el){const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   on("#pon",pushEnable);on("#poff",pushDisable);on("#pcopy",()=>copyText(PAGE_URL,"Link gekopieerd. Open hem in Chrome."))}
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data||{};if(d.type==="open"&&AUTH&&DATA&&!DATA.pending){const v=VIEWS.includes(d.view)?d.view:"agenda";if(VIEW)exitView();poll(true);show(v)}});
 
+/* ---------- app installeren ---------- */
+let installEvt=null;
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;renderInstall()});
+window.addEventListener("appinstalled",()=>{installEvt=null;renderInstall();toast("App geïnstalleerd. Open hem vanaf je startscherm.")});
+function installDismissed(){try{return localStorage.getItem("sdw-install-hide")===APP_VERSION.split(".")[0]}catch(e){return false}}
+function renderInstall(){const el=$("#install");if(!el)return;
+  if(IS_APK||isStandalone()||(AUTH&&installDismissed())){el.hidden=true;return}
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  el.hidden=false;
+  el.innerHTML=`<div class="vin"><span>📲 <b>Zet de app op je startscherm</b>${installEvt?"":ios?" · tik op Delen ⬆️ → Zet op beginscherm":" · open in Chrome → ⋮ → App installeren"}</span>
+    <span class="row">${installEvt?`<button type="button" class="btn" id="instgo">Installeren</button>`:""}${AUTH?`<button type="button" class="x" id="instx" aria-label="Verbergen">×</button>`:""}</span></div>`;
+  const g=$("#instgo");if(g)g.onclick=async()=>{installEvt.prompt();try{await installEvt.userChoice}catch(e){}installEvt=null;renderInstall()};
+  const x=$("#instx");if(x)x.onclick=()=>{try{localStorage.setItem("sdw-install-hide",APP_VERSION.split(".")[0])}catch(e){}renderInstall()}}
+
 /* ---------- update-melding ---------- */
 let updateShown=false;
 async function checkVersion(){if(updateShown||location.protocol==="file:")return;
@@ -994,7 +1014,7 @@ async function doUpdate(){const b=$("#updgo");b.disabled=true;b.textContent="Bez
 
 /* ---------- navigatie ---------- */
 const VIEWS=["agenda","plan","live","goals","team"];
-function show(v,keep){
+function show(v,keep){renderInstall();
   const gateOn=!AUTH;
   $("#tabs").hidden=gateOn;$("#v-gate").hidden=!gateOn;
   if(gateOn){VIEW=null;$("#viewbar").hidden=true;VIEWS.forEach(k=>$("#v-"+k).hidden=true);$("#hname").textContent="Wisselschema";$("#hsub").textContent="Kies je team en meld je aan";$("#crest").textContent="⚽";$("#sync").hidden=true;renderGate();if(!keep)window.scrollTo(0,0);return}
@@ -1027,7 +1047,7 @@ else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
     rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
   show("agenda")}
 setInterval(()=>poll(),3000);setInterval(tick,250);
-$("#ver").textContent="v"+APP_VERSION;$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
+$("#ver").textContent="v"+APP_VERSION;renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
 checkVersion();setInterval(checkVersion,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 
