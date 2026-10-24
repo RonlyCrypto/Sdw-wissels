@@ -3,7 +3,11 @@
   "appName": "SDW Wissels",
   "webDir": "www",
   "server": {
-    "url": "https://ronlycrypto.github.io/Sdw-wissels/",
-    "errorPath": "index.html"
+    "url": "https://sdw-wissels.vercel.app/",
+    "errorPath": "index.html",
+    "allowNavigation": [
+      "sdw-wissels.vercel.app",
+      "ronlycrypto.github.io"
+    ]
   }
 }

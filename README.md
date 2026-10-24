@@ -2,7 +2,7 @@
 
 Teamapp voor jeugdvoetbal: agenda met aanwezigheid, eerlijk wisselschema (4 × 10 min, wissel elke 5 min, keeper per kwart), live wedstrijdklok en doelpunten.
 
-- **Website:** https://ronlycrypto.github.io/Sdw-wissels/
+- **Website:** https://sdw-wissels.vercel.app/
 - **Android-app:** `SDW-Wissels.apk` bij [Releases](https://github.com/RonlyCrypto/Sdw-wissels/releases/latest). De app laadt altijd de nieuwste versie van de website.
 
 ## Aanmelden
