@@ -247,6 +247,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .gedit select{flex:1;min-width:0;width:auto}
 .gedit .btn{padding:8px 12px}
 .grow .x{font-size:16px}
+.plist{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:2px}
 </style>
 
 </head>
@@ -275,13 +276,17 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <section id="v-team" hidden></section>
 </main>
 <div id="toast" role="status"></div>
+<div id="pask" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="paskt">
+  <div class="mic">🔔</div><div class="q-title" id="paskt">Meldingen aanzetten?</div>
+  <p>Krijg een melding op je telefoon bij nieuwe aanmeldingen en als een wedstrijd verandert.</p>
+  <button type="button" class="btn big primary" id="paskyes">Ja, aanzetten</button><button type="button" class="linkbtn" id="paskno" style="margin:0 auto">Niet nu</button></div></div>
 <div id="upd" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="updt">
   <div class="mic">↻</div><div class="q-title" id="updt">Nieuwe versie beschikbaar</div>
   <p>Ververs de app voor de laatste versie <b>v<span id="updv"></span></b>.</p><p class="note" id="updn"></p>
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.4.0";
+const APP_VERSION="2.5.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const PAGE_URL="https://ronlycrypto.github.io/Sdw-wissels/";
 const U=5, N=8, QU=2, Q=4, MATCH=N*U;
@@ -380,6 +385,7 @@ let lastReq=null;
 function applyData(r){const wasPending=!!(DATA&&DATA.pending);const first=!DATA||wasPending;DATA=r;if(!VIEW){ls.set(CACHEKEY,r);AUTH.team_name=r.team.name;ls.set(AUTHKEY,AUTH)}
   if(r.pending){S=null;show(view,true);return}
   if(wasPending)toast("Je bent geaccepteerd. Welkom!");
+  if(first&&!VIEW&&PUSH.state==="unknown")pushCheck().then(()=>{if(view==="team")renderTeam();maybeAskPush()});
   const nReq=(r.requests||[]).length;if(lastReq!==null&&nReq>lastReq)toast(`Nieuwe aanvraag om mee te doen (${nReq}). Zie Team.`);lastReq=r.requests?nReq:null;
   ensureCur();buildS();lastMs=S?matchMs():0;
   if(first&&!VIEW&&view==="agenda"&&!isStaff()&&!myKids().length)view="team";
@@ -869,10 +875,11 @@ function renderTeam(){
       ${x.id!==me.id?`<button type="button" class="x" data-mrem="${x.id}" aria-label="Verwijder ${esc(x.name)}">${delArm==="r"+x.id?"Zeker?":"×"}</button>`:"<span></span>"}
       <button type="button" class="chip-t kp mad" data-madm="${x.id}" aria-pressed="${!!x.is_admin}">Beheerder</button>`:`<span class="chip bench">${ROLE[x.role]}</span><span></span>`}</div>`).join("")}
       <p class="note">${adm?"Als beheerder kun je rollen wijzigen, beheerders aanwijzen en leden verwijderen.":"Alleen de beheerder kan rollen wijzigen."}</p></div>`}
+  if(!viewer){if(PUSH.state==="on"||PUSH.state==="unknown")h+=pushCard();else{const k=h.indexOf("<h2>Mijn account</h2>");h=k>=0?h.slice(0,k)+pushCard()+h.slice(k):pushCard()+h}}
   if(me.is_super){const cr=CLUB&&CLUB!=="err"&&(CLUB.requests||[]).length;h=cr?renderClub()+h:h+renderClub()}
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
-  if(me.is_super)bindClub(el);
+  if(me.is_super)bindClub(el);bindPush(el);
   on("#logout",async()=>{if(delArm!=="logout"){arm("logout");renderTeam();return}delArm=null;try{await rpc("app_act",{p_token:AUTH.token,p_action:"logout",p_data:{}})}catch(e){}localLogout("Je bent uitgelogd")});
   el.querySelectorAll("[data-kid]").forEach(b=>b.onclick=async()=>{const id=b.dataset.kid;let k=(DATA.me.child_ids||[]).slice();k=k.includes(id)?k.filter(x=>x!==id):k.concat([id]);
     DATA.me.child_ids=k;renderTeam();try{await act("me_children",{child_ids:k});toast(k.length?"Opgeslagen":"Geen kind gekozen")}catch(e){toast(errText(e));DATA.rev=0}});
@@ -933,6 +940,45 @@ function bindClub(el){
 function enterView(t){if(t.id===AUTH.team_id){exitView();return}VIEW={id:t.id,name:t.name};DATA=null;S=null;CUR=null;flashU=null;view="agenda";show("agenda");poll(true)}
 function exitView(){VIEW=null;DATA=ls.get(CACHEKEY);CUR=ls.get(CURKEY);if(DATA&&!DATA.pending){ensureCur();buildS();lastMs=S?matchMs():0}else S=null;show("team");poll(true)}
 
+/* ---------- pushmeldingen ---------- */
+const IS_APK=!!window.Capacitor;
+let PUSH={state:"unknown"};
+function pushSupported(){return !IS_APK&&"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&location.protocol==="https:"}
+function b64u(s){const p="=".repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+async function pushCheck(){if(!pushSupported()){PUSH.state=IS_APK?"apk":"unsupported";return}
+  if(Notification.permission==="denied"){PUSH.state="denied";return}
+  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+    if(!sub){PUSH.state="off";return}
+    const r=await rpc("app_push_status",{p_token:AUTH.token,p_endpoint:sub.endpoint});
+    if(r.subscribed)PUSH.state="on";else{await rpc("app_push_subscribe",{p_token:AUTH.token,p_sub:sub.toJSON()});PUSH.state="on"}}
+  catch(e){PUSH.state="off"}}
+async function pushEnable(){
+  try{const perm=await Notification.requestPermission();if(perm!=="granted"){PUSH.state=perm==="denied"?"denied":"off";toast("Meldingen zijn niet toegestaan");renderTeam();return}
+    const reg=await navigator.serviceWorker.ready;const key=await rpc("app_push_key",{});
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
+    await rpc("app_push_subscribe",{p_token:AUTH.token,p_sub:sub.toJSON()});PUSH.state="on";toast("Meldingen staan aan op deze telefoon")}
+  catch(e){toast("Meldingen aanzetten lukt niet: "+(e.code?errText(e):e.message))}
+  renderTeam()}
+async function pushDisable(){try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+    if(sub){await rpc("app_push_unsubscribe",{p_token:AUTH.token,p_endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}PUSH.state="off";toast("Meldingen uit")}catch(e){toast("Uitzetten lukt niet")}renderTeam()}
+function pushCard(){const st=PUSH.state,adm=isAdmin();
+  const what=`<ul class="plist">${adm?"<li>Iemand vraagt toegang die jij moet goedkeuren</li>":""}<li>Een wedstrijd wordt toegevoegd of gewijzigd door een andere trainer</li></ul>`;
+  let body;
+  if(st==="apk")body=`<p class="note">In de APK-app werken meldingen niet. Open <b>${esc(PAGE_URL)}</b> in Chrome, kies <b>⋮ → Toevoegen aan startscherm</b> en zet daar de meldingen aan.</p><div class="row"><button type="button" class="btn" id="pcopy">Kopieer link</button></div>`;
+  else if(st==="unsupported")body=`<p class="note">Deze browser ondersteunt geen meldingen. Gebruik Chrome op Android.</p>`;
+  else if(st==="denied")body=`<p class="note">Meldingen zijn geblokkeerd. Zet ze aan via Chrome: <b>⋮ → Instellingen → Site-instellingen → Meldingen</b>, of lang drukken op het app-icoon → <b>App-info → Meldingen</b>.</p>`;
+  else if(st==="on")body=`<div class="lockrow"><span class="badge sel">🔔 Aan op deze telefoon</span><button type="button" class="btn" id="poff">Uitzetten</button></div>`;
+  else if(st==="unknown")body=`<p class="note">Controleren…</p>`;
+  else body=`<button type="button" class="btn big primary" id="pon">🔔 Meldingen aanzetten</button><p class="note">Werkt het best als je de app via Chrome op je startscherm hebt gezet (⋮ → Toevoegen aan startscherm).</p>`;
+  return `<h2>Meldingen</h2><div class="card"><div class="note">Je krijgt een melding op je telefoon als:</div>${what}${body}</div>`}
+function maybeAskPush(){if(PUSH.state!=="off")return;let asked=null;try{asked=localStorage.getItem("sdw-push-asked")}catch(e){}if(asked)return;
+  try{localStorage.setItem("sdw-push-asked","1")}catch(e){}
+  const m=$("#pask");if(!m)return;m.hidden=false;$("#paskyes").onclick=()=>{m.hidden=true;pushEnable()};$("#paskno").onclick=()=>{m.hidden=true;toast("Je kunt meldingen later aanzetten bij Team")}}
+function bindPush(el){const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
+  on("#pon",pushEnable);on("#poff",pushDisable);on("#pcopy",()=>copyText(PAGE_URL,"Link gekopieerd. Open hem in Chrome."))}
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data||{};if(d.type==="open"&&AUTH&&DATA&&!DATA.pending){const v=VIEWS.includes(d.view)?d.view:"agenda";if(VIEW)exitView();poll(true);show(v)}});
+
 /* ---------- update-melding ---------- */
 let updateShown=false;
 async function checkVersion(){if(updateShown||location.protocol==="file:")return;
@@ -968,11 +1014,12 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){poll(true
 /* ---------- start ---------- */
 AUTH=ls.get(AUTHKEY);CUR=ls.get(CURKEY);
 const hm=location.hash.match(/team-([0-9a-f-]{36})/);
+const hv=location.hash.replace("#","");if(["agenda","plan","live","goals","team"].includes(hv))view=hv;
 if(AUTH){DATA=ls.get(CACHEKEY);if(DATA&&(!DATA.team||DATA.team.id!==AUTH.team_id))DATA=null;
   if(DATA&&!DATA.pending){ensureCur();buildS();lastMs=S?matchMs():0}
   if(hm&&hm[1]!==AUTH.team_id)toast("Je bent aangemeld bij een ander team. Log uit bij Team om te wisselen.");
   try{history.replaceState(null,"",location.pathname)}catch(e){}
-  show("agenda");poll(true)}
+  show(view);poll(true)}
 else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
     rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
   show("agenda")}
