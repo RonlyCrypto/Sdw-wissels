@@ -293,7 +293,8 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 <script>
 const APP_VERSION="2.7.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
-const PAGE_URL="https://ronlycrypto.github.io/Sdw-wissels/";
+const NEW_HOME="https://sdw-wissels.vercel.app/";
+const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
 const U=5, N=8, QU=2, Q=4, MATCH=N*U;
 const PAUSES=["Korte pauze","Lange pauze","Korte pauze"];
 const UMS=U*60000, QMS=QU*UMS, END=MATCH*60000;
