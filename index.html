@@ -260,10 +260,24 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .shot{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);cursor:zoom-in;max-height:220px}
 .shot img{display:block;width:100%;height:auto}
 .shot.open{max-height:none;cursor:zoom-out}
+.splash{position:fixed;inset:0;z-index:50;background:var(--pitch);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));transition:opacity .35s ease}
+.splash.gone{opacity:0;pointer-events:none}
+.sp-in{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.sp-logo{width:132px;height:132px;border-radius:28px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+.sp-name{font-family:var(--display);font-weight:800;font-size:36px;text-transform:uppercase;letter-spacing:.03em;margin-top:8px}
+.sp-sub{font-size:14px;opacity:.85}
+.sp-foot{font-size:12px;opacity:.75}
+.disclaimer{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 0}
+@media (prefers-reduced-motion:reduce){.splash{transition:none}}
 </style>
 
 </head>
 <body>
+<div id="splash" class="splash" role="status" aria-label="SDW Wissels wordt geladen">
+  <div class="sp-in"><img src="icon-512.png" alt="" class="sp-logo" width="132" height="132">
+    <div class="sp-name">SDW Wissels</div><div class="sp-sub">Wisselschema · wedstrijdklok · doelpunten</div></div>
+  <div class="sp-foot">Dit is geen officiële app van SDW.</div>
+</div>
 <header class="top">
   <div class="pad"><div class="brand">
     <div class="crest" id="crest">⚽</div>
@@ -299,7 +313,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.9.0";
+const APP_VERSION="2.10.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -498,7 +512,8 @@ function renderGate(){
     if(gate.teams==="err"){el.innerHTML=`<div class="summary"><div class="big">Geen verbinding</div><div class="sub">Je hebt internet nodig om je aan te melden.</div><div class="row"><button class="btn" id="gretry" type="button">Opnieuw</button></div></div>`;$("#gretry").onclick=()=>{gate.teams=null;renderGate()};return}
     h=`${location.hash==="#club"?`<div class="alert keep"><div class="h">Welkom!</div><div>Kies hieronder je eigen team en vraag toegang aan als teammanager of trainer/coach.</div></div>`:""}<div class="hero"><div class="big">Kies je team</div><div class="sub">Daarna vraag je toegang aan. De beheerder van het team keurt je goed.</div></div>
       <div class="teamlist">${gate.teams.map(t=>`<button type="button" class="teambtn" data-team="${t.id}"><span class="crest sm${t.in_use?" used":""}">${t.in_use?"✓":esc(initials(t.name))}</span><span>${esc(t.name)}<small>${t.in_use?"In gebruik":"Nog niet in gebruik"}</small></span><span class="chev">›</span></button>`).join("")||`<p class="note">Er zijn nog geen teams.</p>`}</div>
-      <p class="note">✓ betekent dat het team de app al gebruikt. Staat je team er niet bij? Vraag de clubbeheerder om het toe te voegen.</p>`;
+      <p class="note">✓ betekent dat het team de app al gebruikt. Staat je team er niet bij? Vraag de clubbeheerder om het toe te voegen.</p>
+      <p class="disclaimer">Dit is geen officiële app van SDW.</p>`;
   }else if(gate.step==="join"){
     h=`<div class="hero"><div class="big">${esc(gate.team.name)}</div><div class="sub">${gate.team.in_use===false?"Dit team gebruikt de app nog niet. Je aanvraag gaat naar de clubbeheerder. Na goedkeuring ben jij de beheerder van dit team en keur jij de andere leden goed.":"Vraag toegang aan. De beheerder van het team keurt je aanvraag goed."}</div></div>
       <form class="card" id="gjoin">
@@ -913,6 +928,7 @@ function renderTeam(){
       <button type="button" class="chip-t kp mad" data-madm="${x.id}" aria-pressed="${!!x.is_admin}">Beheerder</button>`:`<span class="chip bench">${ROLE[x.role]}</span><span></span>`}</div>`).join("")}
       <p class="note">${adm?"Als beheerder kun je rollen wijzigen, beheerders aanwijzen en leden verwijderen.":"Alleen de beheerder kan rollen wijzigen."}</p></div>`}
   if(!viewer){if(PUSH.state==="on"||PUSH.state==="unknown")h+=pushCard();else{const k=h.indexOf("<h2>Mijn account</h2>");h=k>=0?h.slice(0,k)+pushCard()+h.slice(k):pushCard()+h}}
+  h+=`<p class="disclaimer">SDW Wissels v${APP_VERSION} · Dit is geen officiële app van SDW.</p>`;
   if(me.is_super){const cr=CLUB&&CLUB!=="err"&&((CLUB.requests||[]).length||UPLOADS.length);h=cr?renderClub()+h:h+renderClub()}
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
@@ -1086,6 +1102,9 @@ else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
     rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
   show("agenda")}
 setInterval(()=>poll(),3000);setInterval(tick,250);
+(function(){const sp=$("#splash"),t0=Date.now();const hide=()=>{if(!sp||sp.classList.contains("gone"))return;sp.classList.add("gone");setTimeout(()=>sp.remove(),400)};
+  const ready=()=>!AUTH||(DATA!==null);const iv=setInterval(()=>{if((Date.now()-t0>1300&&ready())||Date.now()-t0>3000){clearInterval(iv);hide()}},100);
+  sp.onclick=hide})();
 $("#ver").textContent="v"+APP_VERSION;renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
 checkVersion();setInterval(checkVersion,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
