@@ -260,13 +260,33 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .shot{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);cursor:zoom-in;max-height:220px}
 .shot img{display:block;width:100%;height:auto}
 .shot.open{max-height:none;cursor:zoom-out}
-.splash{position:fixed;inset:0;z-index:50;background:var(--pitch);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));transition:opacity .35s ease}
+.splash{position:fixed;inset:0;z-index:50;--cx:50%;--cy:50%;--d:100px;overflow:hidden;color:#fff;cursor:pointer;
+  background:radial-gradient(120% 80% at 50% 45%,#0e8a47 0%,#0b7a3e 45%,#085f30 100%);transition:opacity .4s ease}
 .splash.gone{opacity:0;pointer-events:none}
-.sp-in{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
-.sp-logo{width:132px;height:132px;border-radius:28px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-.sp-name{font-family:var(--display);font-weight:800;font-size:36px;text-transform:uppercase;letter-spacing:.03em;margin-top:8px}
-.sp-sub{font-size:14px;opacity:.85}
-.sp-foot{font-size:12px;opacity:.75}
+.splash::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,rgba(255,255,255,.035) 0 34px,transparent 34px 68px);opacity:0;animation:inFade .6s .1s forwards}
+.splash .in-field{position:absolute;left:7%;top:calc(5% + env(safe-area-inset-top,0px));width:86%;height:calc(90% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:visible}
+.splash .in-field *{fill:none;stroke:rgba(255,255,255,.55);stroke-width:2.2;stroke-linecap:round}
+.splash .in-draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:inDraw .9s cubic-bezier(.6,0,.2,1) forwards}
+.splash .in-ball{position:absolute;left:var(--cx);top:var(--cy);width:calc(var(--d)*.42);height:calc(var(--d)*.42);margin:calc(var(--d)*-.21) 0 0 calc(var(--d)*-.21);animation:inRoll 1.05s .55s cubic-bezier(.25,.7,.3,1) both,inOut .25s 1.55s forwards}
+.splash .in-ball svg{width:100%;height:100%;animation:inSpin 1.05s .55s cubic-bezier(.25,.7,.3,1) both}
+.splash .in-crest{position:absolute;left:var(--cx);top:var(--cy);width:var(--d);height:var(--d);margin:calc(var(--d)/-2) 0 0 calc(var(--d)/-2);border-radius:50%;background:#fff;border:calc(var(--d)*.055) solid #c62020;display:grid;place-items:center;
+  font-family:var(--display);font-weight:800;font-size:calc(var(--d)*.34);color:#c62020;letter-spacing:.02em;box-shadow:0 14px 30px rgba(0,0,0,.28);transform:scale(0);animation:inPop .55s 1.55s cubic-bezier(.3,1.6,.5,1) forwards}
+.splash .in-ring{position:absolute;left:var(--cx);top:var(--cy);width:var(--d);height:var(--d);margin:calc(var(--d)/-2) 0 0 calc(var(--d)/-2);border-radius:50%;border:3px solid rgba(255,255,255,.7);opacity:0;animation:inRing .9s 1.6s ease-out forwards}
+.splash .in-title{position:absolute;left:0;right:0;top:calc(var(--cy) + var(--d)/2 + 26px);text-align:center;font-family:var(--display);font-weight:800;font-size:38px;letter-spacing:.04em;text-transform:uppercase;display:flex;justify-content:center;text-shadow:0 2px 10px rgba(0,0,0,.25)}
+.splash .in-title span{display:inline-block;opacity:0;transform:translateY(18px);animation:inUp .45s cubic-bezier(.2,.8,.2,1) forwards}
+.splash .in-title .gap{width:.3em}
+.splash .in-sub{position:absolute;left:0;right:0;top:calc(var(--cy) + var(--d)/2 + 74px);text-align:center;font-size:13.5px;opacity:0;animation:inFade .6s 2.55s forwards}
+.splash .in-foot{position:absolute;left:0;right:0;bottom:calc(4.5% + env(safe-area-inset-bottom,0px));text-align:center;font-size:11.5px;opacity:0;animation:inFadeTo .6s 2.8s forwards}
+@keyframes inDraw{to{stroke-dashoffset:0}}
+@keyframes inFade{to{opacity:1}}
+@keyframes inFadeTo{to{opacity:.75}}
+@keyframes inOut{to{opacity:0}}
+@keyframes inRoll{0%{transform:translate(-190px,260px) scale(.7)}60%{transform:translate(-12px,18px) scale(1)}78%{transform:translate(0,-10px) scale(1.05)}90%{transform:translate(0,3px) scale(1)}100%{transform:translate(0,0) scale(1)}}
+@keyframes inSpin{from{transform:rotate(-540deg)}to{transform:rotate(0)}}
+@keyframes inPop{0%{transform:scale(0) rotate(-20deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes inRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.1)}}
+@keyframes inUp{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.splash,.splash *,.splash::before{animation-duration:.01s!important;animation-delay:0s!important;transition:none!important}}
 .disclaimer{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 0}
 @media (prefers-reduced-motion:reduce){.splash{transition:none}}
 .h2row{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -281,10 +301,25 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 
 </head>
 <body>
-<div id="splash" class="splash" role="status" aria-label="SDW Wissels wordt geladen">
-  <div class="sp-in"><img src="icon-512.png" alt="" class="sp-logo" width="132" height="132">
-    <div class="sp-name">SDW Wissels</div><div class="sp-sub">Wisselschema · wedstrijdklok · doelpunten</div></div>
-  <div class="sp-foot">Dit is geen officiële app van SDW.</div>
+<div id="splash" class="splash" role="status" aria-label="SDW Wissels wordt geladen. Dit is geen officiële app van SDW.">
+  <svg class="in-field" viewBox="0 0 300 560" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <rect class="in-draw" x="2" y="2" width="296" height="556" rx="6" style="--len:1720;animation-delay:.05s"/>
+    <line class="in-draw" x1="2" y1="280" x2="298" y2="280" style="--len:300;animation-delay:.35s"/>
+    <circle class="in-draw" cx="150" cy="280" r="52" style="--len:330;animation-delay:.45s"/>
+    <rect class="in-draw" x="80" y="2" width="140" height="70" style="--len:420;animation-delay:.5s"/>
+    <rect class="in-draw" x="80" y="488" width="140" height="70" style="--len:420;animation-delay:.5s"/>
+  </svg>
+  <div class="in-ball" aria-hidden="true"><svg viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="46" fill="#fff" stroke="#1d1d1d" stroke-width="3"/>
+    <polygon points="50,30 66,42 60,61 40,61 34,42" fill="#1d1d1d"/>
+    <path d="M50 30 L50 6 M66 42 L88 34 M60 61 L74 82 M40 61 L26 82 M34 42 L12 34" stroke="#1d1d1d" stroke-width="3" fill="none"/>
+    <path d="M38 8 L50 6 L62 8 M86 26 L88 34 L94 44 M80 76 L74 82 L64 92 M36 92 L26 82 L20 76 M6 44 L12 34 L14 26" stroke="#1d1d1d" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </svg></div>
+  <div class="in-ring" aria-hidden="true"></div>
+  <div class="in-crest" aria-hidden="true">SDW</div>
+  <div class="in-title" aria-hidden="true"></div>
+  <div class="in-sub" aria-hidden="true">Wisselschema · wedstrijdklok · doelpunten</div>
+  <div class="in-foot" aria-hidden="true">Dit is geen officiële app van SDW.</div>
 </div>
 <header class="top">
   <div class="pad"><div class="brand">
@@ -321,7 +356,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.11.0";
+const APP_VERSION="2.12.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -1116,9 +1151,16 @@ else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
     rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
   show("agenda")}
 setInterval(()=>poll(),3000);setInterval(tick,250);
-(function(){const sp=$("#splash"),t0=Date.now();const hide=()=>{if(!sp||sp.classList.contains("gone"))return;sp.classList.add("gone");setTimeout(()=>sp.remove(),400)};
-  const ready=()=>!AUTH||(DATA!==null);const iv=setInterval(()=>{if((Date.now()-t0>1300&&ready())||Date.now()-t0>3000){clearInterval(iv);hide()}},100);
-  sp.onclick=hide})();
+(function(){const sp=$("#splash");if(!sp)return;const t0=Date.now();
+  const t=sp.querySelector(".in-title");"SDW WISSELS".split("").forEach((ch,i)=>{const e=document.createElement("span");if(ch===" ")e.className="gap";else e.textContent=ch;e.style.animationDelay=(1.95+i*0.045)+"s";t.appendChild(e)});
+  const lay=()=>{const c=sp.querySelector(".in-field circle");if(!c)return;const r=c.getBoundingClientRect();
+    sp.style.setProperty("--cx",(r.left+r.width/2)+"px");sp.style.setProperty("--cy",(r.top+r.height/2)+"px");sp.style.setProperty("--d",r.width+"px")};
+  lay();addEventListener("resize",lay);
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,minT=reduce?900:3900;
+  const hide=()=>{if(sp.classList.contains("gone"))return;sp.classList.add("gone");removeEventListener("resize",lay);setTimeout(()=>sp.remove(),450)};
+  const ready=()=>!AUTH||(DATA!==null);
+  const iv=setInterval(()=>{if((Date.now()-t0>minT&&ready())||Date.now()-t0>5500){clearInterval(iv);hide()}},100);
+  sp.onclick=()=>{clearInterval(iv);hide()}})();
 $("#ver").textContent="v"+APP_VERSION;renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
 checkVersion();setInterval(checkVersion,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
