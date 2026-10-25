@@ -359,7 +359,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.14.0";
+const APP_VERSION="2.14.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -1063,16 +1063,19 @@ const IS_APK=!!window.Capacitor;
 let PUSH={state:"unknown"};
 function pushSupported(){return !IS_APK&&"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&location.protocol==="https:"}
 function b64u(s){const p="=".repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
-async function pushCheck(){if(!pushSupported()){PUSH.state=IS_APK?"apk":"unsupported";return}
+let pushChecking=null;
+function swReady(ms){return Promise.race([navigator.serviceWorker.ready,new Promise((_,rej)=>setTimeout(()=>rej(new Error("sw-timeout")),ms||4000))])}
+function pushCheck(){if(!pushChecking)pushChecking=pushCheckInner().finally(()=>{pushChecking=null});return pushChecking}
+async function pushCheckInner(){if(!pushSupported()){PUSH.state=IS_APK?"apk":"unsupported";return}
   if(Notification.permission==="denied"){PUSH.state="denied";return}
-  try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+  try{const reg=await swReady();const sub=await reg.pushManager.getSubscription();
     if(!sub){PUSH.state="off";return}
     const r=await rpc("app_push_status",{p_token:AUTH.token,p_endpoint:sub.endpoint});
     if(r.subscribed)PUSH.state="on";else{await rpc("app_push_subscribe",{p_token:AUTH.token,p_sub:sub.toJSON()});PUSH.state="on"}}
   catch(e){PUSH.state="off"}}
 async function pushEnable(){
   try{const perm=await Notification.requestPermission();if(perm!=="granted"){PUSH.state=perm==="denied"?"denied":"off";toast("Meldingen zijn niet toegestaan");show(view,true);return}
-    const reg=await navigator.serviceWorker.ready;const key=await rpc("app_push_key",{});
+    const reg=await swReady(8000);const key=await rpc("app_push_key",{});
     let sub=await reg.pushManager.getSubscription();
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
     await rpc("app_push_subscribe",{p_token:AUTH.token,p_sub:sub.toJSON()});PUSH.state="on";toast("Meldingen staan aan op deze telefoon")}
@@ -1081,6 +1084,7 @@ async function pushEnable(){
 async function pushDisable(){try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
     if(sub){await rpc("app_push_unsubscribe",{p_token:AUTH.token,p_endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}PUSH.state="off";toast("Meldingen uit")}catch(e){toast("Uitzetten lukt niet")}renderTeam()}
 function pushCard(){const st=PUSH.state,adm=isAdmin();
+  if(st==="unknown")setTimeout(()=>pushCheck().then(()=>{if(view==="team"&&PUSH.state!=="unknown")renderTeam()}),0);
   const what=`<ul class="plist">${adm?"<li>Iemand vraagt toegang die jij moet goedkeuren</li>":""}<li>Een wedstrijd wordt toegevoegd of gewijzigd door een andere trainer</li></ul>`;
   let body;
   if(st==="apk")body=`<p class="note">In de APK-app werken meldingen niet. Open <b>${esc(PAGE_URL)}</b> in Chrome, kies <b>⋮ → Toevoegen aan startscherm</b> en zet daar de meldingen aan.</p><div class="row"><button type="button" class="btn" id="pcopy">Kopieer link</button></div>`;
@@ -1179,6 +1183,7 @@ else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
     rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
   show("agenda")}
 setInterval(()=>poll(),3000);setInterval(tick,250);
+if(AUTH)setTimeout(()=>pushCheck().then(()=>{if(view==="team")renderTeam();if(DATA&&!DATA.pending)maybeAskPush()}),800);
 (function(){const sp=$("#splash");if(!sp)return;
   if(AUTH&&(liveMatch()||recentlyUsed())){sp.remove();markActive();return}
   markActive();const t0=Date.now();
