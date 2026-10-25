@@ -254,6 +254,12 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .installbar .btn{padding:6px 12px;font-size:14px;background:var(--pitch);color:#fff;border-color:var(--pitch)}
 .installbar .x{color:var(--muted)}
 .linkbtn.danger-link{color:var(--red);margin:0;align-self:flex-start}
+.emptyag{border-color:var(--keeper)}
+.emptyag p{margin:0}
+.note.ok{color:var(--field);font-weight:600}
+.shot{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);cursor:zoom-in;max-height:220px}
+.shot img{display:block;width:100%;height:auto}
+.shot.open{max-height:none;cursor:zoom-out}
 </style>
 
 </head>
@@ -293,7 +299,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.8.3";
+const APP_VERSION="2.9.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -329,7 +335,7 @@ async function rpc(fn,body){const t0=Date.now();let r;
   return j}
 const ERR={bad_code:"Die teamcode klopt niet. Vraag de teammanager om de juiste code.",bad_name:"Vul je naam in.",forbidden:"Dat mag alleen een coach of teammanager.",
   offline:"Geen internet. Probeer het zo opnieuw.",last_manager:"Er moet minstens één teammanager blijven.",not_logged_in:"Je bent uitgelogd.",
-  too_many_members:"Dit team heeft te veel leden.",pending:"Je aanvraag is nog niet goedgekeurd.",last_admin:"Er moet minstens één beheerder blijven.",too_many_requests:"Er staan te veel aanvragen open. Probeer het later.",bad_role:"Kies wat je bent.",team_exists:"Dat team bestaat al.",closed:"Deze wedstrijd is afgerond en kan niet meer worden aangepast.",use_request:"Ververs de app, er is een nieuwe versie.",bad_input:"Vul alle velden in.",no_team:"Dit team bestaat niet meer."};
+  too_many_members:"Dit team heeft te veel leden.",pending:"Je aanvraag is nog niet goedgekeurd.",last_admin:"Er moet minstens één beheerder blijven.",bad_image:"Dit bestand is geen geldige afbeelding.",too_many_uploads:"Er staan al veel screenshots klaar. Wacht tot de beheerder ze heeft ingevoerd.",too_many_requests:"Er staan te veel aanvragen open. Probeer het later.",bad_role:"Kies wat je bent.",team_exists:"Dat team bestaat al.",closed:"Deze wedstrijd is afgerond en kan niet meer worden aangepast.",use_request:"Ververs de app, er is een nieuwe versie.",bad_input:"Vul alle velden in.",no_team:"Dit team bestaat niet meer."};
 const errText=e=>ERR[e.code]||"Er ging iets mis ("+e.message+")";
 let inflight=0,localSeq=0;
 async function act(a,d){if(VIEW){const er=new Error("forbidden");er.code="forbidden";throw er}inflight++;localSeq++;try{return await rpc("app_act",{p_token:AUTH.token,p_action:a,p_data:d||{}})}
@@ -569,12 +575,22 @@ function renderAgenda(){
   const cm=curMatch();
   let h=cm?`<p class="note pickhint">Gekozen: <b>${fmtDate(cm.match_date)}${cm.opponent?" · "+esc(cm.opponent):""}</b>. Indeling, Live en Goals tonen deze wedstrijd. Tik op een datum om te wisselen.</p>`:"";
   if(DATA.me.role==="ouder"&&!myKids().length)h+=`<div class="alert keep"><div class="h">Wie is jouw kind?</div><div>Kies bij Team je kind, dan kun je per wedstrijd aangeven of het erbij is.</div><div><button class="btn" type="button" id="gokids">Kind kiezen</button></div></div>`;
-  if(staff)h+=agendaEdit==="new"?matchForm():`<button class="btn primary" type="button" id="madd">+ Wedstrijd toevoegen</button>`;
-  h+=`<h2>Komende wedstrijden</h2>`+(up.map(matchCard).join("")||`<p class="note">${staff?"Nog geen wedstrijden gepland. Tik op “+ Wedstrijd toevoegen”.":"De teammanager heeft nog geen wedstrijden ingevuld."}</p>`);
+  if(staff&&!up.length&&agendaEdit!=="new"){const sent=schedSent();
+    h+=`<div class="card emptyag"><div class="q-title">📅 Nog geen agenda</div>
+      <p class="note">Zet de komende wedstrijden erin, dan kun je per wedstrijd een indeling maken. Dat kan op twee manieren:</p>
+      <ol class="plist"><li><b>Zelf invoeren:</b> tik op “+ Wedstrijd toevoegen”, één keer per wedstrijddag.</li>
+      <li><b>Laten invoeren:</b> stuur een screenshot van het programma, bijvoorbeeld uit de Voetbal.nl-app. De beheerder van de app zet de wedstrijden er dan voor je in.</li></ol>
+      <div class="row"><button class="btn primary" type="button" id="madd">+ Wedstrijd toevoegen</button><label class="btn" for="schedfile">📷 Screenshot sturen</label></div>
+      <input type="file" id="schedfile" accept="image/*" hidden>
+      ${sent?`<p class="note ok">✓ Screenshot verstuurd op ${esc(sent)}. De wedstrijden verschijnen hier zodra ze zijn ingevoerd.</p>`:""}</div>`}
+  else if(staff)h+=agendaEdit==="new"?matchForm():`<button class="btn primary" type="button" id="madd">+ Wedstrijd toevoegen</button>
+    <label class="linkbtn" for="schedfile" style="margin:0;align-self:flex-start">📷 Programma als screenshot laten invoeren</label><input type="file" id="schedfile" accept="image/*" hidden>`;
+  h+=`<h2>Komende wedstrijden</h2>`+(up.map(matchCard).join("")||(staff?"":`<p class="note">De teammanager heeft nog geen wedstrijden ingevuld.</p>`));
   if(past.length)h+=`<h2>Gespeeld</h2>`+past.map(matchCard).join("");
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
-  on("#madd",()=>{agendaEdit="new";renderAgenda();$("#mdate").focus()});on("#gokids",()=>show("team"));
+  on("#madd",()=>{agendaEdit="new";renderAgenda();$("#mdate").focus()});
+  const sf=$("#schedfile");if(sf)sf.onchange=()=>{const f=sf.files&&sf.files[0];if(f)sendSchedule(f);sf.value=""};on("#gokids",()=>show("team"));
   el.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>{const [mid,pid,v]=b.dataset.att.split("|");const m=matches().find(x=>x.id===mid);
     const val=v==="1";setAtt(mid,pid,m.attendance[pid]===val?null:val)});
   el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{openAtt[b.dataset.open]=!openAtt[b.dataset.open];renderAgenda()});
@@ -610,6 +626,16 @@ function bindClose(el){
   el.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>{const id=b.dataset.close;if(delArm!=="cl"+id){arm("cl"+id,4000);show(view,true);return}delArm=null;closeMatch(id)});
   el.querySelectorAll("[data-reopen]").forEach(b=>b.onclick=()=>{const id=b.dataset.reopen;if(delArm!=="ro"+id){arm("ro"+id);show(view,true);return}delArm=null;reopenMatch(id)});
 }
+function schedSent(){try{return localStorage.getItem("sdw-sched-"+(DATA&&DATA.team.id))}catch(e){return null}}
+function shrinkImage(file){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{const max=1500,sc=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);let q=.8,d=c.toDataURL("image/jpeg",q);while(d.length>1400000&&q>.3){q-=.15;d=c.toDataURL("image/jpeg",q)}res(d)};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("Kan de afbeelding niet lezen"))};img.src=url})}
+async function sendSchedule(file){toast("Screenshot versturen…");
+  try{const d=await shrinkImage(file);await rpc("app_upload_schedule",{p_token:AUTH.token,p_image:d,p_note:""});
+    const when=fmtDate(todayStr());try{localStorage.setItem("sdw-sched-"+DATA.team.id,when)}catch(e){}
+    toast("Verstuurd! De beheerder zet de wedstrijden erin.");renderAgenda()}
+  catch(e){toast(e.code?errText(e):e.message)}}
 function selectMatch(id){CUR=id;ls.set(CURKEY,CUR);buildS();lastMs=S?matchMs():0;flashU=null}
 function matchBar(){const ms=matches();if(!ms.length)return "";
   return `<div class="mbar"><label for="msel" class="lbl">Wedstrijd</label><select id="msel">${ms.map(m=>`<option value="${m.id}"${m.id===CUR?" selected":""}>${fmtDate(m.match_date)}${m.opponent?" · "+esc(m.opponent):""}${m.home?"":" (uit)"}${m.closed?" 🔒":""}</option>`).join("")}</select></div>`}
@@ -887,7 +913,7 @@ function renderTeam(){
       <button type="button" class="chip-t kp mad" data-madm="${x.id}" aria-pressed="${!!x.is_admin}">Beheerder</button>`:`<span class="chip bench">${ROLE[x.role]}</span><span></span>`}</div>`).join("")}
       <p class="note">${adm?"Als beheerder kun je rollen wijzigen, beheerders aanwijzen en leden verwijderen.":"Alleen de beheerder kan rollen wijzigen."}</p></div>`}
   if(!viewer){if(PUSH.state==="on"||PUSH.state==="unknown")h+=pushCard();else{const k=h.indexOf("<h2>Mijn account</h2>");h=k>=0?h.slice(0,k)+pushCard()+h.slice(k):pushCard()+h}}
-  if(me.is_super){const cr=CLUB&&CLUB!=="err"&&(CLUB.requests||[]).length;h=cr?renderClub()+h:h+renderClub()}
+  if(me.is_super){const cr=CLUB&&CLUB!=="err"&&((CLUB.requests||[]).length||UPLOADS.length);h=cr?renderClub()+h:h+renderClub()}
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   if(me.is_super)bindClub(el);bindPush(el);
@@ -928,13 +954,20 @@ function renderPending(){const el=$("#v-agenda"),me=DATA.me;
 
 /* ---------- clubbeheer ---------- */
 let CLUB=null,clubLoading=false;
-async function loadClub(){if(clubLoading)return;clubLoading=true;try{CLUB=await rpc("app_club",{p_token:AUTH.token,p_action:"list",p_data:{}})}catch(e){CLUB="err"}clubLoading=false;if(view==="team"&&!(document.activeElement&&document.activeElement.id==="clubname"))renderTeam()}
+let UPLOADS=[],upOpen={};
+async function loadClub(){if(clubLoading)return;clubLoading=true;try{CLUB=await rpc("app_club",{p_token:AUTH.token,p_action:"list",p_data:{}});UPLOADS=(await rpc("app_club_uploads",{p_token:AUTH.token,p_done_id:null})).uploads||[]}catch(e){CLUB="err"}clubLoading=false;if(view==="team"&&!(document.activeElement&&document.activeElement.id==="clubname"))renderTeam()}
 async function club(a,d){try{await rpc("app_club",{p_token:AUTH.token,p_action:a,p_data:d||{}});return true}catch(e){toast(errText(e));return false}finally{loadClub()}}
 function renderClub(){
   if(CLUB===null){loadClub();return `<h2>Clubbeheer</h2><p class="note">Laden…</p>`}
   if(CLUB==="err")return `<h2>Clubbeheer</h2><p class="note">Kon de teams niet laden.</p>`;
   const rq=CLUB.requests||[];
-  let h=`<h2>Clubbeheer · nieuwe teams${rq.length?` (${rq.length})`:""}</h2>`;
+  let h="";
+  if(UPLOADS.length)h+=`<h2>Ontvangen programma's (${UPLOADS.length})</h2>`+UPLOADS.map(u=>`<div class="card req"><div class="q-title">${esc(u.team)}</div>
+      <div class="note">Van ${esc(u.name)} · ${fmtAgo(u.created_at)}${u.note?" · "+esc(u.note):""}</div>
+      <button type="button" class="shot${upOpen[u.id]?" open":""}" data-upview="${u.id}" aria-label="Screenshot vergroten"><img src="${u.image}" alt="Screenshot van het programma van ${esc(u.team)}"></button>
+      <div class="row"><button type="button" class="btn primary" data-updone="${u.id}">✓ Ingevoerd</button></div>
+      <p class="note">Voer de wedstrijden in (of stuur de screenshot door) en tik daarna op Ingevoerd.</p></div>`).join("");
+  h+=`<h2>Clubbeheer · nieuwe teams${rq.length?` (${rq.length})`:""}</h2>`;
   h+=rq.length?rq.map(x=>`<div class="card req"><div class="q-title">${esc(x.name)}</div><div class="note">Wil beheerder worden van <b>${esc(x.team)}</b> als ${ROLE[x.role].toLowerCase()}${x.note?" · ouder van "+esc(x.note):""} · ${fmtAgo(x.created_at)}</div>
       <div class="row"><button type="button" class="btn primary" data-capprove="${x.id}">✓ Accepteren als beheerder</button><button type="button" class="btn danger" data-creject="${x.id}">${delArm==="cr"+x.id?"Zeker?":"Weigeren"}</button></div></div>`).join("")
     :`<p class="note">Geen aanvragen voor nieuwe teams. Teams zonder beheerder komen hier binnen. Daarna keurt de teambeheerder zelf de leden goed.</p>`;
@@ -943,6 +976,8 @@ function renderClub(){
     <form id="clubadd" class="row"><input class="txt" id="clubname" placeholder="Nieuw team, bijv. SDW O9-1" style="flex:1;min-width:0"><button class="btn" type="submit">Toevoegen</button></form></div>`;
   return h}
 function bindClub(el){
+  el.querySelectorAll("[data-upview]").forEach(b=>b.onclick=()=>{const id=b.dataset.upview;upOpen[id]=!upOpen[id];b.classList.toggle("open",!!upOpen[id])});
+  el.querySelectorAll("[data-updone]").forEach(b=>b.onclick=async()=>{b.disabled=true;try{UPLOADS=(await rpc("app_club_uploads",{p_token:AUTH.token,p_done_id:+b.dataset.updone})).uploads||[];toast("Afgehandeld")}catch(e){toast(errText(e))}renderTeam()});
   el.querySelectorAll("[data-viewteam]").forEach(b=>b.onclick=()=>{const t=(CLUB.teams||[]).find(x=>x.id===b.dataset.viewteam);if(t)enterView(t)});
   el.querySelectorAll("[data-capprove]").forEach(b=>b.onclick=async()=>{b.disabled=true;if(await club("approve",{member:b.dataset.capprove}))toast("Geaccepteerd. Diegene is nu beheerder van het team.")});
   el.querySelectorAll("[data-creject]").forEach(b=>b.onclick=async()=>{const id=b.dataset.creject;if(delArm!=="cr"+id){arm("cr"+id);renderTeam();return}delArm=null;if(await club("reject",{member:id}))toast("Aanvraag geweigerd")});
