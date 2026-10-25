@@ -359,7 +359,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.13.0";
+const APP_VERSION="2.14.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -457,7 +457,7 @@ async function poll(force){if(!AUTH||polling)return;if(!force&&(pending||pushing
   finally{polling=false}}
 let lastReq=null;
 function applyData(r){const wasPending=!!(DATA&&DATA.pending);const first=!DATA||wasPending;DATA=r;if(!VIEW){ls.set(CACHEKEY,r);AUTH.team_name=r.team.name;ls.set(AUTHKEY,AUTH)}
-  if(r.pending){S=null;show(view,true);return}
+  if(r.pending){S=null;show(view,true);if(PUSH.state==="unknown")pushCheck().then(()=>show(view,true));return}
   if(wasPending)toast("Je bent geaccepteerd. Welkom!");
   if(first&&!VIEW)setTimeout(maybeInstallPopup,1500);
   if(first&&!VIEW&&PUSH.state==="unknown")pushCheck().then(()=>{if(view==="team")renderTeam();maybeAskPush()});
@@ -1018,7 +1018,9 @@ function renderPending(){const el=$("#v-agenda"),me=DATA.me;
   el.innerHTML=`<div class="hero"><div class="big">Even geduld</div><div class="sub">${DATA.new_team?`${esc(DATA.team.name)} gebruikt de app nog niet. Je aanvraag is verstuurd naar de clubbeheerder. Na goedkeuring ben jij de beheerder van dit team.`:`Je aanvraag is verstuurd naar de beheerder van ${esc(DATA.team.name)}.`}</div></div>
     <div class="card"><div class="lockrow"><div><div class="q-title">${esc(me.name)}</div><div class="note">${ROLE[me.role]}${me.note?" · ouder van "+esc(me.note):""}</div></div><span class="badge wait">Wacht op goedkeuring</span></div>
     <p class="note">Laat deze app open of kom later terug. Zodra je bent geaccepteerd, gaat de app vanzelf open.</p>
+    ${PUSH.state==="off"?`<button type="button" class="btn primary" id="ppush">🔔 Stuur me een melding als ik ben geaccepteerd</button>`:PUSH.state==="on"?`<p class="note ok">🔔 Je krijgt een melding zodra je bent geaccepteerd.</p>`:PUSH.state==="apk"?`<p class="note">Wil je een melding? Open de app in Chrome en zet daar de meldingen aan.</p>`:""}
     <div class="row"><button type="button" class="btn" id="pcancel">${delArm==="pc"?"Zeker? Tik nogmaals":"Aanvraag intrekken"}</button></div></div>`;
+  const pp=$("#ppush");if(pp)pp.onclick=pushEnable;
   $("#pcancel").onclick=async()=>{if(delArm!=="pc"){arm("pc");renderPending();return}delArm=null;try{await rpc("app_act",{p_token:AUTH.token,p_action:"logout",p_data:{}})}catch(e){}localLogout("Aanvraag ingetrokken")}}
 
 /* ---------- clubbeheer ---------- */
@@ -1069,13 +1071,13 @@ async function pushCheck(){if(!pushSupported()){PUSH.state=IS_APK?"apk":"unsuppo
     if(r.subscribed)PUSH.state="on";else{await rpc("app_push_subscribe",{p_token:AUTH.token,p_sub:sub.toJSON()});PUSH.state="on"}}
   catch(e){PUSH.state="off"}}
 async function pushEnable(){
-  try{const perm=await Notification.requestPermission();if(perm!=="granted"){PUSH.state=perm==="denied"?"denied":"off";toast("Meldingen zijn niet toegestaan");renderTeam();return}
+  try{const perm=await Notification.requestPermission();if(perm!=="granted"){PUSH.state=perm==="denied"?"denied":"off";toast("Meldingen zijn niet toegestaan");show(view,true);return}
     const reg=await navigator.serviceWorker.ready;const key=await rpc("app_push_key",{});
     let sub=await reg.pushManager.getSubscription();
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
     await rpc("app_push_subscribe",{p_token:AUTH.token,p_sub:sub.toJSON()});PUSH.state="on";toast("Meldingen staan aan op deze telefoon")}
   catch(e){toast("Meldingen aanzetten lukt niet: "+(e.code?errText(e):e.message))}
-  renderTeam()}
+  show(view,true)}
 async function pushDisable(){try{const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
     if(sub){await rpc("app_push_unsubscribe",{p_token:AUTH.token,p_endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}PUSH.state="off";toast("Meldingen uit")}catch(e){toast("Uitzetten lukt niet")}renderTeam()}
 function pushCard(){const st=PUSH.state,adm=isAdmin();
