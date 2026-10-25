@@ -356,7 +356,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.12.0";
+const APP_VERSION="2.12.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -1139,11 +1139,17 @@ document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>show(b.datase
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){poll(true);if(S&&S.live.startedAt){try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}}}});
 
 /* ---------- start ---------- */
+// wedstrijd bezig (klok loopt of staat in de pauze)? Dan geen intro en meteen naar Live.
+function liveMatch(){if(!DATA||DATA.pending)return null;const t=todayStr();
+  return (DATA.matches||[]).find(m=>{const l=m.state&&m.state.live;return !m.closed&&l&&(l.startedAt||(l.elapsed>0&&l.elapsed<END))&&m.match_date===t})||null}
+function recentlyUsed(){try{return Date.now()-(+localStorage.getItem("sdw-last-active")||0)<10*60000}catch(e){return false}}
+function markActive(){try{localStorage.setItem("sdw-last-active",String(Date.now()))}catch(e){}}
+setInterval(()=>{if(!document.hidden)markActive()},15000);document.addEventListener("visibilitychange",()=>{if(document.hidden)markActive()});
 AUTH=ls.get(AUTHKEY);CUR=ls.get(CURKEY);
 const hm=location.hash.match(/team-([0-9a-f-]{36})/);
 const hv=location.hash.replace("#","");if(["agenda","plan","live","goals","team"].includes(hv))view=hv;
 if(AUTH){DATA=ls.get(CACHEKEY);if(DATA&&(!DATA.team||DATA.team.id!==AUTH.team_id))DATA=null;
-  if(DATA&&!DATA.pending){ensureCur();buildS();lastMs=S?matchMs():0}
+  if(DATA&&!DATA.pending){const lm=liveMatch();if(lm&&!hv){CUR=lm.id;view="live"}ensureCur();buildS();lastMs=S?matchMs():0}
   if(hm&&hm[1]!==AUTH.team_id)toast("Je bent aangemeld bij een ander team. Log uit bij Team om te wisselen.");
   try{history.replaceState(null,"",location.pathname)}catch(e){}
   show(view);poll(true)}
@@ -1151,7 +1157,9 @@ else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
     rpc("app_list_teams",{}).then(ts=>{gate.teams=ts;const t=ts.find(x=>x.id===hm[1]);if(t){gate.team=t;if(!AUTH&&gate.step==="join"){const n=$("#gname")&&$("#gname").value;renderGate();if(n)$("#gname").value=n}}else{gate.step="teams";renderGate()}}).catch(()=>{})}
   show("agenda")}
 setInterval(()=>poll(),3000);setInterval(tick,250);
-(function(){const sp=$("#splash");if(!sp)return;const t0=Date.now();
+(function(){const sp=$("#splash");if(!sp)return;
+  if(AUTH&&(liveMatch()||recentlyUsed())){sp.remove();markActive();return}
+  markActive();const t0=Date.now();
   const t=sp.querySelector(".in-title");"SDW WISSELS".split("").forEach((ch,i)=>{const e=document.createElement("span");if(ch===" ")e.className="gap";else e.textContent=ch;e.style.animationDelay=(1.95+i*0.045)+"s";t.appendChild(e)});
   const lay=()=>{const c=sp.querySelector(".in-field circle");if(!c)return;const r=c.getBoundingClientRect();
     sp.style.setProperty("--cx",(r.left+r.width/2)+"px");sp.style.setProperty("--cy",(r.top+r.height/2)+"px");sp.style.setProperty("--d",r.width+"px")};
