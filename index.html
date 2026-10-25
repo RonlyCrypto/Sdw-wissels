@@ -350,13 +350,16 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <div class="mic">🔔</div><div class="q-title" id="paskt">Meldingen aanzetten?</div>
   <p>Krijg een melding op je telefoon bij nieuwe aanmeldingen en als een wedstrijd verandert.</p>
   <button type="button" class="btn big primary" id="paskyes">Ja, aanzetten</button><button type="button" class="linkbtn" id="paskno" style="margin:0 auto">Niet nu</button></div></div>
+<div id="inst" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="instt">
+  <div class="mic">📲</div><div class="q-title" id="instt">Installeer de app</div><p id="instp"></p>
+  <button type="button" class="btn big primary" id="instgo2">Installeren</button><button type="button" class="linkbtn" id="instlater" style="margin:0 auto">Later</button></div></div>
 <div id="upd" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="updt">
   <div class="mic">↻</div><div class="q-title" id="updt">Nieuwe versie beschikbaar</div>
   <p>Ververs de app voor de laatste versie <b>v<span id="updv"></span></b>.</p><p class="note" id="updn"></p>
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.12.1";
+const APP_VERSION="2.13.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -456,6 +459,7 @@ let lastReq=null;
 function applyData(r){const wasPending=!!(DATA&&DATA.pending);const first=!DATA||wasPending;DATA=r;if(!VIEW){ls.set(CACHEKEY,r);AUTH.team_name=r.team.name;ls.set(AUTHKEY,AUTH)}
   if(r.pending){S=null;show(view,true);return}
   if(wasPending)toast("Je bent geaccepteerd. Welkom!");
+  if(first&&!VIEW)setTimeout(maybeInstallPopup,1500);
   if(first&&!VIEW&&PUSH.state==="unknown")pushCheck().then(()=>{if(view==="team")renderTeam();maybeAskPush()});
   const nReq=(r.requests||[]).length;if(lastReq!==null&&nReq>lastReq)toast(`Nieuwe aanvraag om mee te doen (${nReq}). Zie Team.`);lastReq=r.requests?nReq:null;
   ensureCur();buildS();lastMs=S?matchMs():0;
@@ -1084,9 +1088,9 @@ function pushCard(){const st=PUSH.state,adm=isAdmin();
   else if(st==="unknown")body=`<p class="note">Controleren…</p>`;
   else body=`<button type="button" class="btn big primary" id="pon">🔔 Meldingen aanzetten</button><p class="note">Werkt het best als je de app via Chrome op je startscherm hebt gezet (⋮ → Toevoegen aan startscherm).</p>`;
   return `<h2>Meldingen</h2><div class="card"><div class="note">Je krijgt een melding op je telefoon als:</div>${what}${body}</div>`}
-function maybeAskPush(){if(PUSH.state!=="off")return;let asked=null;try{asked=localStorage.getItem("sdw-push-asked")}catch(e){}if(asked)return;
+function maybeAskPush(){if(PUSH.state!=="off")return;if($("#inst").hidden===false){setTimeout(maybeAskPush,4000);return}let asked=null;try{asked=localStorage.getItem("sdw-push-asked")}catch(e){}if(asked)return;
   try{localStorage.setItem("sdw-push-asked","1")}catch(e){}
-  const m=$("#pask");if(!m)return;m.hidden=false;$("#paskyes").onclick=()=>{m.hidden=true;pushEnable()};$("#paskno").onclick=()=>{m.hidden=true;toast("Je kunt meldingen later aanzetten bij Team")}}
+  const m=$("#pask");if(!m||$("#inst").hidden===false)return;m.hidden=false;$("#paskyes").onclick=()=>{m.hidden=true;pushEnable()};$("#paskno").onclick=()=>{m.hidden=true;toast("Je kunt meldingen later aanzetten bij Team")}}
 function bindPush(el){const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   on("#pon",pushEnable);on("#poff",pushDisable);on("#pcopy",()=>copyText(PAGE_URL,"Link gekopieerd. Open hem in Chrome."))}
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data||{};if(d.type==="open"&&AUTH&&DATA&&!DATA.pending){const v=VIEWS.includes(d.view)?d.view:"agenda";if(VIEW)exitView();poll(true);show(v)}});
@@ -1094,7 +1098,23 @@ if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("messag
 /* ---------- app installeren ---------- */
 let installEvt=null;
 const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;renderInstall()});
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;renderInstall();maybeInstallPopup()});
+function instAskedRecently(){try{return Date.now()-(+localStorage.getItem("sdw-inst-ask")||0)<20*3600000}catch(e){return false}}
+function maybeInstallPopup(){
+  if(!AUTH||!DATA||DATA.pending||isStandalone()||instAskedRecently()||$("#upd").hidden===false||$("#pask").hidden===false)return;
+  if(!IS_APK&&!installEvt)return;
+  if(typeof liveMatch==="function"&&liveMatch())return;   // niet storen tijdens een wedstrijd
+  try{localStorage.setItem("sdw-inst-ask",String(Date.now()))}catch(e){}
+  const m=$("#inst");$("#instt").textContent=IS_APK?"Nieuwe app beschikbaar":"Installeer de app";
+  $("#instp").innerHTML=IS_APK?"Deze oude app krijgt geen meldingen meer. Tik op de knop: de nieuwe app opent in Chrome en daar tik je op <b>Installeren</b>. Daarna mag je deze app verwijderen."
+    :"Zet SDW Wissels als app op je telefoon. Dan opent hij sneller, zonder adresbalk, en krijg je meldingen met het SDW-logo.";
+  $("#instgo2").textContent=IS_APK?"Open de nieuwe app":"📲 Installeren";
+  m.hidden=false}
+async function doInstall(){const m=$("#inst");
+  if(IS_APK){m.hidden=true;location.href="googlechrome://navigate?url="+encodeURIComponent(NEW_HOME);
+    setTimeout(()=>{copyText(NEW_HOME,"Lukt het niet? De link is gekopieerd: plak hem in Chrome.")},1800);return}
+  if(!installEvt){m.hidden=true;toast("Kies in Chrome ⋮ → App installeren");return}
+  installEvt.prompt();try{await installEvt.userChoice}catch(e){}installEvt=null;m.hidden=true;renderInstall()}
 window.addEventListener("appinstalled",()=>{installEvt=null;renderInstall();toast("App geïnstalleerd. Open hem vanaf je startscherm.")});
 function installDismissed(){try{return localStorage.getItem("sdw-install-hide")===APP_VERSION.split(".")[0]}catch(e){return false}}
 function renderInstall(){const el=$("#install");if(!el)return;
@@ -1169,7 +1189,7 @@ setInterval(()=>poll(),3000);setInterval(tick,250);
   const ready=()=>!AUTH||(DATA!==null);
   const iv=setInterval(()=>{if((Date.now()-t0>minT&&ready())||Date.now()-t0>5500){clearInterval(iv);hide()}},100);
   sp.onclick=()=>{clearInterval(iv);hide()}})();
-$("#ver").textContent="v"+APP_VERSION;renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
+$("#ver").textContent="v"+APP_VERSION;$("#instgo2").onclick=doInstall;$("#instlater").onclick=()=>{$("#inst").hidden=true};renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
 checkVersion();setInterval(checkVersion,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 
