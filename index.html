@@ -269,6 +269,14 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .sp-foot{font-size:12px;opacity:.75}
 .disclaimer{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 0}
 @media (prefers-reduced-motion:reduce){.splash{transition:none}}
+.h2row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.h2row h2{margin:0}
+.menuwrap{position:relative}
+.dots{width:40px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 22px/1 var(--body);cursor:pointer;display:grid;place-items:center;padding:0}
+.dots[aria-expanded="true"]{border-color:var(--field)}
+.menu{position:absolute;right:0;top:calc(100% + 6px);z-index:6;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.25);min-width:250px;padding:6px;display:flex;flex-direction:column}
+.menu button,.menu label{background:none;border:0;text-align:left;font:600 15px var(--body);color:var(--ink);padding:12px 12px;border-radius:8px;cursor:pointer}
+.menu button:hover,.menu label:hover,.menu button:focus-visible{background:var(--field-soft);outline:none}
 </style>
 
 </head>
@@ -313,7 +321,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.10.0";
+const APP_VERSION="2.11.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -555,6 +563,8 @@ function login(r){AUTH={token:r.token,team_id:r.team_id,team_name:r.team_name};l
   try{history.replaceState(null,"",location.pathname)}catch(e){}view="agenda";show("agenda");poll(true)}
 
 /* ---------- agenda ---------- */
+let agMenu=false;
+document.addEventListener("click",e=>{if(agMenu&&!e.target.closest(".menuwrap")){agMenu=false;if(view==="agenda")renderAgenda()}});
 let agendaEdit=null, openAtt={}, delArm=null;
 function arm(key,ms){delArm=key;setTimeout(()=>{if(delArm===key){delArm=null;show(view,true)}},ms||3000)}
 function attCounts(m){let y=0,n=0,q=0;activePlayers().forEach(p=>{const a=m.attendance[p.id];if(a===true)y++;else if(a===false)n++;else q++});return {y,n,q}}
@@ -598,13 +608,17 @@ function renderAgenda(){
       <div class="row"><button class="btn primary" type="button" id="madd">+ Wedstrijd toevoegen</button><label class="btn" for="schedfile">📷 Screenshot sturen</label></div>
       <input type="file" id="schedfile" accept="image/*" hidden>
       ${sent?`<p class="note ok">✓ Screenshot verstuurd op ${esc(sent)}. De wedstrijden verschijnen hier zodra ze zijn ingevoerd.</p>`:""}</div>`}
-  else if(staff)h+=agendaEdit==="new"?matchForm():`<button class="btn primary" type="button" id="madd">+ Wedstrijd toevoegen</button>
-    <label class="linkbtn" for="schedfile" style="margin:0;align-self:flex-start">📷 Programma als screenshot laten invoeren</label><input type="file" id="schedfile" accept="image/*" hidden>`;
-  h+=`<h2>Komende wedstrijden</h2>`+(up.map(matchCard).join("")||(staff?"":`<p class="note">De teammanager heeft nog geen wedstrijden ingevuld.</p>`));
+  else if(staff&&agendaEdit==="new")h+=matchForm();
+  const menu=staff&&up.length&&agendaEdit!=="new";
+  h+=(menu?`<div class="h2row"><h2>Komende wedstrijden</h2><div class="menuwrap"><button type="button" class="dots" id="agmenu" aria-haspopup="true" aria-expanded="${agMenu}" aria-label="Opties">⋯</button>
+      ${agMenu?`<div class="menu" role="menu"><button type="button" role="menuitem" id="madd">＋ Wedstrijd toevoegen</button><label role="menuitem" for="schedfile">📷 Programma als screenshot laten invoeren</label></div>`:""}
+      <input type="file" id="schedfile" accept="image/*" hidden></div></div>`:`<h2>Komende wedstrijden</h2>`)+(up.map(matchCard).join("")||(staff?"":`<p class="note">De teammanager heeft nog geen wedstrijden ingevuld.</p>`));
   if(past.length)h+=`<h2>Gespeeld</h2>`+past.map(matchCard).join("");
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
-  on("#madd",()=>{agendaEdit="new";renderAgenda();$("#mdate").focus()});
+  on("#madd",()=>{agMenu=false;agendaEdit="new";renderAgenda();$("#mdate").focus()});
+  on("#agmenu",e=>{e.stopPropagation();agMenu=!agMenu;renderAgenda()});
+  const sl=el.querySelector('.menu label[for="schedfile"]');if(sl)sl.addEventListener("click",()=>{setTimeout(()=>{agMenu=false;const m=el.querySelector(".menu");if(m)m.remove();const b=$("#agmenu");if(b)b.setAttribute("aria-expanded","false")},0)});
   const sf=$("#schedfile");if(sf)sf.onchange=()=>{const f=sf.files&&sf.files[0];if(f)sendSchedule(f);sf.value=""};on("#gokids",()=>show("team"));
   el.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>{const [mid,pid,v]=b.dataset.att.split("|");const m=matches().find(x=>x.id===mid);
     const val=v==="1";setAtt(mid,pid,m.attendance[pid]===val?null:val)});
