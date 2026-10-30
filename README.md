@@ -1,4 +1,4 @@
-# SDW Wissels
+# Wissel App
 
 Teamapp voor jeugdvoetbal: agenda met aanwezigheid, eerlijk wisselschema (4 × 10 min, wissel elke 5 min, keeper per kwart), live wedstrijdklok en doelpunten.
 

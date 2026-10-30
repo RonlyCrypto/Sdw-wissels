@@ -1,7 +1,7 @@
 {
-  "name": "SDW O8-3 Wissels",
+  "name": "Wissel App",
   "short_name": "Wissels",
-  "description": "Wisselschema voor SDW O8-3: eerlijke speeltijd, keeper per kwart en een wedstrijdklok.",
+  "description": "Wisselschema voor jeugdvoetbal: eerlijke speeltijd, keeper per kwart, wedstrijdklok en doelpunten.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,21 @@
   "theme_color": "#0b7a3e",
   "lang": "nl",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
-    {"src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

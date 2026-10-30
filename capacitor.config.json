@@ -1,6 +1,6 @@
 {
   "appId": "nl.sdw.o83.wissels",
-  "appName": "SDW Wissels",
+  "appName": "Wissels",
   "webDir": "www",
   "server": {
     "url": "https://sdw-wissels.vercel.app/",

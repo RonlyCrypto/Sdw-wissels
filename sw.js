@@ -1,5 +1,5 @@
 // Houdt de app beschikbaar zonder internet en toont pushmeldingen.
-const CACHE = "sdw-wissels-v9";
+const CACHE = "sdw-wissels-v10";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable.png", "icon-badge.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
@@ -14,8 +14,8 @@ self.addEventListener("fetch", e => {
 });
 self.addEventListener("push", e => {
   let d = {};
-  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: "SDW Wissels", body: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(d.title || "SDW Wissels", {
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: "Wissel App", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "Wissel App", {
     body: d.body || "", tag: d.tag || undefined, renotify: !!d.tag, icon: "icon-192.png", badge: "icon-badge.png",
     data: { url: d.url || "" }
   }));
