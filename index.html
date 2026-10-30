@@ -359,7 +359,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="2.14.3";
+const APP_VERSION="2.14.4";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -639,6 +639,8 @@ function renderAgenda(){
   const cm=curMatch();
   let h=cm?`<p class="note pickhint">Gekozen: <b>${fmtDate(cm.match_date)}${cm.opponent?" · "+esc(cm.opponent):""}</b>. Indeling, Live en Goals tonen deze wedstrijd. Tik op een datum om te wisselen.</p>`:"";
   if(DATA.me.role==="ouder"&&!myKids().length)h+=`<div class="alert keep"><div class="h">Wie is jouw kind?</div><div>Kies bij Team je kind, dan kun je per wedstrijd aangeven of het erbij is.</div><div><button class="btn" type="button" id="gokids">Kind kiezen</button></div></div>`;
+  if(VIEW&&!up.length)h+=`<div class="card emptyag"><div class="q-title">📅 Nog geen agenda</div>
+      <p class="note">Dit zien de trainers en teammanagers van ${esc(DATA.team.name)}: ze kunnen zelf wedstrijden toevoegen met “+ Wedstrijd toevoegen”, of een screenshot van het programma sturen. Die screenshot komt bij jou binnen onder Team → Ontvangen programma's.</p></div>`;
   if(staff&&!up.length&&agendaEdit!=="new"){const sent=schedSent();
     h+=`<div class="card emptyag"><div class="q-title">📅 Nog geen agenda</div>
       <p class="note">Zet de komende wedstrijden erin, dan kun je per wedstrijd een indeling maken. Dat kan op twee manieren:</p>
