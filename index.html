@@ -299,6 +299,14 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:6;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.25);min-width:250px;padding:6px;display:flex;flex-direction:column}
 .menu button,.menu label{background:none;border:0;text-align:left;font:600 15px var(--body);color:var(--ink);padding:12px 12px;border-radius:8px;cursor:pointer}
 .menu button:hover,.menu label:hover,.menu button:focus-visible{background:var(--field-soft);outline:none}
+.frow{display:flex;align-items:center;gap:12px;padding-block:8px;border-bottom:1px solid var(--line)}
+.frow .mi{flex:1}
+.switch{flex:none;width:52px;height:30px;border-radius:15px;border:0;background:var(--bench);position:relative;cursor:pointer;padding:0;transition:background .2s}
+.switch i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .2s}
+.switch[aria-checked="true"]{background:var(--field)}
+.switch[aria-checked="true"] i{left:25px}
+.switch:focus-visible{outline:2px solid var(--field);outline-offset:2px}
+.tabs button[hidden]{display:none!important}
 </style>
 
 </head>
@@ -361,7 +369,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.0.0";
+const APP_VERSION="3.1.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -410,6 +418,10 @@ const isMgr=()=>!!DATA&&DATA.me.role==="manager";
 const canEdit=(m)=>{m=m||curMatch();return isStaff()&&!!m&&!m.closed};
 const isAdmin=()=>!!DATA&&!DATA.pending&&!!DATA.me.is_admin;
 const settings=()=>(DATA&&DATA.team.settings)||{};
+// onderdelen die de beheerder per team aan of uit zet
+const FEATURES=[{k:"live",name:"Wedstrijdklok (Live)",desc:"Klok met kwarten, piepjes bij wissels en wie erin/eruit moet.",def:true},
+  {k:"goals",name:"Doelpunten",desc:"Doelpunten bijhouden, uitslagen en topscorers.",def:false}];
+const feat=k=>{const f=(settings().features||{})[k];return f===undefined?FEATURES.find(x=>x.k===k).def:!!f};
 const allPlayers=()=>settings().players||[];
 const activePlayers=()=>allPlayers().filter(p=>!p.gone);
 const matches=()=>DATA?DATA.matches:[];
@@ -625,12 +637,12 @@ function matchCard(m){
   const kids=m.closed?[]:myKids();
   let h=`<article class="q mcard${m.id===CUR?" cur":""}${m.closed?" closed":""}"><button type="button" class="q-head pick" data-pick="${m.id}" aria-pressed="${m.id===CUR}"><div class="q-title">${fmtDate(m.match_date)}${m.kickoff?`<small>${esc(m.kickoff)}</small>`:""}</div>
     <div class="row">${m.id===CUR?`<span class="badge sel">✓ Gekozen</span>`:""}${m.closed?`<span class="badge lock">🔒 Afgerond</span>`:m.match_date===t?`<span class="badge">Vandaag</span>`:""}<span class="chip ${m.home?"":"bench"}">${m.home?"Thuis":"Uit"}</span></div></button><div class="q-body">
-    <div class="mtitle"><span>${esc(matchTitle(m))}</span>${played(m)||(m.goals||[]).length?`<b class="score">${sc[0]} – ${sc[1]}</b>`:""}</div>`;
+    <div class="mtitle"><span>${esc(matchTitle(m))}</span>${feat("goals")&&(played(m)||(m.goals||[]).length)?`<b class="score">${sc[0]} – ${sc[1]}</b>`:""}</div>`;
   if(kids.length&&!played(m))h+=kids.map(k=>`<div class="kidrow"><span><b>Is ${esc(nameOf(k))} erbij?</b></span>${attSeg(m,k,true)}</div>`).join("");
   h+=`<div class="attsum"><span class="yes">✓ ${c.y}</span><span class="no">✗ ${c.n}</span><span>? ${c.q}</span><button type="button" class="linkbtn" data-open="${m.id}">${isOpen?"Verberg":"Wie is er?"}</button></div>`;
   if(isOpen)h+=`<div class="attlist">${activePlayers().map(p=>`<div class="attrow"><span>${esc(nameOf(p.id))}</span>${attSeg(m,p.id,staff||kids.includes(p.id))}</div>`).join("")}
     ${staff?`<p class="note">Niet ingevuld (?) telt in de indeling als aanwezig.</p>`:""}</div>`;
-  h+=`<div class="row"><button class="btn primary" type="button" data-goplan="${m.id}">Indeling ›</button>${(m.goals||[]).length||played(m)?`<button class="btn" type="button" data-gogoals="${m.id}">⚽ Doelpunten</button>`:""}
+  h+=`<div class="row"><button class="btn primary" type="button" data-goplan="${m.id}">Indeling ›</button>${feat("goals")&&((m.goals||[]).length||played(m))?`<button class="btn" type="button" data-gogoals="${m.id}">⚽ Doelpunten</button>`:""}
     ${staff?`<button class="btn" type="button" data-medit="${m.id}">Wijzig</button>`:""}${closeBtn(m)}
     ${m.closed&&isAdmin()?`<button type="button" class="btn" data-reopen="${m.id}">${delArm==="ro"+m.id?"Zeker?":"Heropenen"}</button>`:""}</div>`;
   if(agendaEdit===m.id)h+=matchForm(m);
@@ -832,9 +844,9 @@ function renderLive(){
   const sc=score(curMatch());
   let h=matchBar()+closedBar(curMatch())+`<div class="clock"><div class="phase">${phase}</div><div class="time" id="ltime">${fmt(ms)}</div>
     <div class="bar">${[0,1,2,3].map(b=>`<span><i style="width:${Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))}%"></i></span>`).join("")}</div>
-    ${(curMatch().goals||[]).length?`<div class="phase">${esc(matchTitle(curMatch()))} · ${sc[0]} – ${sc[1]}</div>`:""}</div>`;
+    ${feat("goals")&&(curMatch().goals||[]).length?`<div class="phase">${esc(matchTitle(curMatch()))} · ${sc[0]} – ${sc[1]}</div>`:""}</div>`;
   if(staff)h+=`<div class="ctrl">${ended?"":running?`<button class="btn big" id="lpause" type="button">❚❚ Pauze</button>`
-    :`<button class="btn big primary" id="lstart" type="button">▶ ${ms===0?"Start wedstrijd":atBreak?`Start kwart ${q+1}`:"Verder"}</button>`}<button class="btn big" id="lgoal" type="button">⚽ Doelpunt</button></div>`;
+    :`<button class="btn big primary" id="lstart" type="button">▶ ${ms===0?"Start wedstrijd":atBreak?`Start kwart ${q+1}`:"Verder"}</button>`}${feat("goals")?`<button class="btn big" id="lgoal" type="button">⚽ Doelpunt</button>`:""}</div>`;
   const doneBtn=u=>S.done[u]?`<span class="tick">✓ Gedaan</span>`:staff?`<button class="btn" type="button" data-ldone="${u}">✓ Wissel gedaan</button>`:"";
   if(Date.now()<flashUntil&&flashU!=null){const c=changesAt(flashU);
     h+=`<div class="alert"><div class="h">Wissel nu!</div><div class="swline"><span class="in">↑ ${names(c.ins)}</span></div><div class="swline"><span class="out">↓ ${names(c.outs)}</span></div><div>${doneBtn(flashU)}</div></div>`}
@@ -968,6 +980,9 @@ function renderTeam(){
       <div class="field"><label for="pa">Speler 1</label><select id="pa"><option value="">Niemand</option>${pl.map(p=>`<option value="${p.id}"${(set.pair||[])[0]===p.id?" selected":""}>${esc(p.name)}</option>`).join("")}</select></div>
       <div class="field"><label for="pb">Speler 2</label><select id="pb"><option value="">Niemand</option>${pl.map(p=>`<option value="${p.id}"${(set.pair||[])[1]===p.id?" selected":""}>${esc(p.name)}</option>`).join("")}</select></div></div>
       <p class="note">Samen op de bank mag niet. Samen in het veld gebeurt zoveel mogelijk aan het eind. Keept de een, dan speelt de ander dat kwart.</p></div>
+    ${isAdmin()?`<h2>Onderdelen</h2><div class="card">${FEATURES.map(f=>`<div class="frow"><div class="mi"><b>${f.name}</b><span class="note">${f.desc}</span></div>
+        <button type="button" class="switch" role="switch" data-feat="${f.k}" aria-checked="${feat(f.k)}" aria-label="${f.name}"><i></i></button></div>`).join("")}
+      <p class="note">Het wisselschema en de agenda staan altijd aan. Wat je uitzet, verdwijnt voor iedereen in het team. Er gaat niets verloren: zet je het weer aan, dan is alles er nog.</p></div>`:""}
     <h2>Wedstrijdvorm</h2><div class="card">
       <div class="field"><label>Spelers in het veld (met keeper)</label><div class="seg">${[5,6,7,8].map(n=>`<button type="button" data-fs="${n}" aria-pressed="${(set.fieldSize||6)===n}">${n}</button>`).join("")}</div></div>
       <p class="note">4 kwarten van 10 minuten. Keeper wisselt in de pauze, spelers wisselen elke 5 minuten.</p></div>`;
@@ -975,8 +990,8 @@ function renderTeam(){
     h+=`<h2>Spelers (${pl.length})</h2><div class="card"><div class="chips">${pl.map(p=>`<span class="chip">${esc(nameOf(p.id))}</span>`).join("")}</div></div>`;
   }
   const {rows}=seasonStats();
-  h+=`<h2>Seizoen per speler</h2><div class="gridwrap"><table class="tt"><thead><tr><th>Speler</th><th>Wedstr.</th><th>Min.</th><th>🧤 Kw.</th><th>⚽</th></tr></thead><tbody>
-    ${rows.sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id))).map(r=>`<tr><td>${esc(nameOf(r.id))}</td><td>${r.games}</td><td>${r.min}</td><td>${r.keep}</td><td>${r.goals}</td></tr>`).join("")}</tbody></table></div>`;
+  h+=`<h2>Seizoen per speler</h2><div class="gridwrap"><table class="tt"><thead><tr><th>Speler</th><th>Wedstr.</th><th>Min.</th><th>🧤 Kw.</th>${feat("goals")?"<th>⚽</th>":""}</tr></thead><tbody>
+    ${rows.sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id))).map(r=>`<tr><td>${esc(nameOf(r.id))}</td><td>${r.games}</td><td>${r.min}</td><td>${r.keep}</td>${feat("goals")?`<td>${r.goals}</td>`:""}</tr>`).join("")}</tbody></table></div>`;
   if(viewer){const mem=DATA.members||[];h+=`<h2>Leden (${mem.length})</h2><div class="card">${mem.map(x=>`<div class="mrow"><div class="mi"><b>${esc(x.name)}${x.is_admin?` <span class="adm">beheerder</span>`:""}</b></div><span class="chip bench">${ROLE[x.role]}</span><span></span><span></span></div>`).join("")||`<p class="note">Nog geen leden.</p>`}</div>`}
   if(staff){const mem=DATA.members||[];
     h+=`<h2>Leden (${mem.length})</h2><div class="card">${mem.map(x=>`<div class="mrow"><div class="mi"><b>${esc(x.name)}${x.is_admin?` <span class="adm">beheerder</span>`:""}</b>${x.id===me.id?" (jij)":""}<span class="note">${(x.child_ids||[]).map(id=>esc(nameOf(id))).join(", ")}</span></div>
@@ -1012,6 +1027,8 @@ function renderTeam(){
   const af=$("#addf");if(af)af.onsubmit=e=>{e.preventDefault();const v=$("#addn").value.trim();if(!v)return;const s=cloneSet();s.nextId=s.nextId||1;
     let id;do{id="p"+(s.nextId++)}while(s.players.some(p=>p.id===id));s.players.push({id,name:v,canKeep:true});saveSettings(s);renderTeam();toast(v+" toegevoegd")};
   const pa=$("#pa"),pb=$("#pb");if(pa){const f=()=>{const s=cloneSet();s.pair=[pa.value||null,pb.value||null];saveSettings(s)};pa.onchange=f;pb.onchange=f}
+  el.querySelectorAll("[data-feat]").forEach(x=>x.onclick=()=>{const s=cloneSet(),k=x.dataset.feat,v=!feat(k);s.features=Object.assign({},s.features||{},{[k]:v});saveSettings(s);
+    toast(`${FEATURES.find(f=>f.k===k).name} ${v?"aan":"uit"}`);show("team",true)});
   el.querySelectorAll("[data-fs]").forEach(x=>x.onclick=()=>{const s=cloneSet();s.fieldSize=+x.dataset.fs;saveSettings(s);renderTeam()});
   el.querySelectorAll("[data-role]").forEach(s=>s.onchange=async()=>{try{await act("member_role",{member:s.dataset.role,role:s.value});toast("Rol gewijzigd")}catch(e){toast(errText(e));DATA.rev=0;renderTeam()}});
   el.querySelectorAll("[data-mrem]").forEach(b=>b.onclick=async()=>{const id=b.dataset.mrem;if(delArm!=="r"+id){arm("r"+id);renderTeam();return}delArm=null;
@@ -1157,6 +1174,8 @@ function show(v,keep){renderInstall();
   if(!DATA){VIEWS.forEach(k=>$("#v-"+k).hidden=k!=="agenda");$("#v-agenda").innerHTML=`<div class="summary"><div class="big">Laden…</div></div>`;$("#hname").textContent=AUTH.team_name||"";$("#hsub").textContent="Gegevens ophalen…";return}
   if(DATA.pending){$("#tabs").hidden=true;VIEWS.forEach(k=>$("#v-"+k).hidden=k!=="agenda");$("#hname").textContent=DATA.team.name;$("#crest").textContent=initials(DATA.team.name);
     $("#hsub").textContent=`${DATA.me.name} · wacht op goedkeuring`;renderPending();return}
+  if((v==="live"&&!feat("live"))||(v==="goals"&&!feat("goals")))v="agenda";
+  $("#t-live").hidden=!feat("live");$("#t-goals").hidden=!feat("goals");
   view=v;VIEWS.forEach(k=>{$("#v-"+k).hidden=k!==v;$("#t-"+k).setAttribute("aria-selected",k===v)});
   $("#viewbar").hidden=!VIEW;if(VIEW)$("#viewname").textContent=VIEW.name;
   const nr=(DATA.requests||[]).length;$("#t-team").innerHTML="Team"+(nr?`<span class="dot">${nr}</span>`:"");
