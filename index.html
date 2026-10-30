@@ -369,7 +369,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.1.0";
+const APP_VERSION="3.1.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -1000,11 +1000,12 @@ function renderTeam(){
       <button type="button" class="chip-t kp mad" data-madm="${x.id}" aria-pressed="${!!x.is_admin}">Beheerder</button>`:`<span class="chip bench">${ROLE[x.role]}</span><span></span>`}</div>`).join("")}
       <p class="note">${adm?"Als beheerder kun je rollen wijzigen, beheerders aanwijzen en leden verwijderen.":"Alleen de beheerder kan rollen wijzigen."}</p></div>`}
   if(!viewer){if(PUSH.state==="on"||PUSH.state==="unknown")h+=pushCard();else{const k=h.indexOf("<h2>Mijn account</h2>");h=k>=0?h.slice(0,k)+pushCard()+h.slice(k):pushCard()+h}}
-  h+=`<p class="disclaimer">Wissel App v${APP_VERSION} · Dit is geen officiële app van SDW.</p>`;
+  h+=`<p class="disclaimer">Wissel App v${APP_VERSION} · Dit is geen officiële app van SDW. · <button type="button" class="linkbtn" id="replayintro" style="margin:0;font-size:12px">▶ Intro bekijken</button></p>`;
   if(me.is_super){const cr=CLUB&&CLUB!=="err"&&((CLUB.requests||[]).length||UPLOADS.length);h=cr?renderClub()+h:h+renderClub()}
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   if(me.is_super)bindClub(el);bindPush(el);
+  on("#replayintro",()=>{try{localStorage.removeItem("sdw-last-active");sessionStorage.setItem("sdw-force-intro","1")}catch(e){}location.reload()});
   on("#logout",async()=>{if(delArm!=="logout"){arm("logout");renderTeam();return}delArm=null;try{await rpc("app_act",{p_token:AUTH.token,p_action:"logout",p_data:{}})}catch(e){}localLogout("Je bent uitgelogd")});
   el.querySelectorAll("[data-kid]").forEach(b=>b.onclick=async()=>{const id=b.dataset.kid;let k=(DATA.me.child_ids||[]).slice();k=k.includes(id)?k.filter(x=>x!==id):k.concat([id]);
     DATA.me.child_ids=k;renderTeam();try{await act("me_children",{child_ids:k});toast(k.length?"Opgeslagen":"Geen kind gekozen")}catch(e){toast(errText(e));DATA.rev=0}});
@@ -1208,7 +1209,8 @@ else{if(hm){gate.step="join";gate.team={id:hm[1],name:"Team"};
 setInterval(()=>poll(),3000);setInterval(tick,250);
 if(AUTH)setTimeout(()=>pushCheck().then(()=>{if(view==="team")renderTeam();if(DATA&&!DATA.pending)maybeAskPush()}),800);
 (function(){const sp=$("#splash");if(!sp)return;
-  if(AUTH&&(liveMatch()||recentlyUsed())){sp.remove();markActive();return}
+  let force=false;try{force=sessionStorage.getItem("sdw-force-intro")==="1";sessionStorage.removeItem("sdw-force-intro")}catch(e){}
+  if(!force&&AUTH&&(liveMatch()||recentlyUsed())){sp.remove();markActive();return}
   markActive();const t0=Date.now();
   const t=sp.querySelector(".in-title");"WISSEL APP".split("").forEach((ch,i)=>{const e=document.createElement("span");if(ch===" ")e.className="gap";else e.textContent=ch;e.style.animationDelay=(1.95+i*0.045)+"s";t.appendChild(e)});
   const lay=()=>{const c=sp.querySelector(".in-field circle");if(!c)return;const r=c.getBoundingClientRect();
