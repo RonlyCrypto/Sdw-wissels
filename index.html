@@ -323,6 +323,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .bteam{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:10px}
 .loanrow{display:flex;flex-direction:column;gap:2px;padding-block:8px;border-bottom:1px solid var(--line)}
 .loanrow:last-child{border-bottom:0}
+.chip-t.declined{color:var(--red);border-color:var(--red)}
 </style>
 
 </head>
@@ -389,7 +390,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.6.0";
+const APP_VERSION="3.7.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -460,7 +461,7 @@ function ensureCur(){if(!curMatch())CUR=pickDefault();if(!VIEW)ls.set(CURKEY,CUR
 function buildS(){const m=curMatch();if(!m){S=null;return}
   const st=m.state||{},set=settings();
   S={players:activePlayers().map(p=>({id:p.id,name:p.name,canKeep:p.canKeep!==false,present:m.attendance[p.id]!==false}))
-      .concat(loans().filter(l=>l.dir==="in"&&l.match_id===m.id).map(l=>({id:l.gid,name:l.player_name,canKeep:false,present:m.attendance[l.gid]!==false,guest:true}))),
+      .concat(loans().filter(l=>l.dir==="in"&&l.match_id===m.id&&l.status==="approved").map(l=>({id:l.gid,name:l.player_name,canKeep:false,present:m.attendance[l.gid]!==false,guest:true}))),
     pair:(set.pair||[]).slice(0,2),fieldSize:set.fieldSize||6,subMode:set.subMode||"5min",
     keeperPick:(st.keeperPick||[null,null,null,null]).slice(),plan:st.plan||null,done:(st.done||[]).slice(),
     live:Object.assign({elapsed:0,startedAt:null,stopAt:null},st.live||{}),locked:!!st.locked}}
@@ -803,10 +804,14 @@ function renderPlan(){
           <div class="note">${t.when==="before"?`Speelt om ${esc(t.kickoff)}`:`Vrij tot ${esc(t.kickoff)}, kan eerst bij jullie meedoen`}${t.opponent?" · tegen "+esc(t.opponent):""} (${t.home?"thuis":"uit"})</div>
           <div class="note">${t.staff.length?t.staff.map(x=>`${x.role==="manager"?"Teamleider":"Coach"}: <b>${esc(x.name)}</b>`).join(" · "):"Nog geen coach of teamleider in de app"}</div>
           <div class="chips">${t.players.map(pl=>{const ln=loans().find(l=>l.dir==="in"&&l.match_id===m.id&&l.lender===t.team&&l.player_id===pl.id);
-            return ln?`<button type="button" class="chip-t" aria-pressed="true" data-unloan="${ln.id}">✓ ${esc(pl.name.split(/\s+/)[0])} geleend</button>`
+            const fn=esc(pl.name.split(/\s+/)[0]);
+            return ln?(ln.status==="approved"?`<button type="button" class="chip-t" aria-pressed="true" data-unloan="${ln.id}">✓ ${fn} geleend</button>`
+              :ln.status==="requested"?`<button type="button" class="chip-t kp" aria-pressed="true" data-unloan="${ln.id}">⏳ ${fn} op aanvraag</button>`
+              :`<button type="button" class="chip-t declined" data-loan="${t.team_id}|${pl.id}">✗ ${fn} geweigerd</button>`)
               :`<button type="button" class="chip-t" data-loan="${t.team_id}|${pl.id}">+ ${esc(pl.name.split(/\s+/)[0])}</button>`}).join("")||`<span class="note">Dit team heeft nog geen spelers in de app. Vraag de coach wie er is.</span>`}</div>
           <form class="row" data-loanform="${t.team_id}"><input class="txt" placeholder="Of typ een naam" style="flex:1;min-width:0" aria-label="Naam van de speler"><button class="btn" type="submit">+ Lenen</button></form></div>`).join("")}
-      ${b&&b.teams&&b.teams.length?`<p class="note">Tik op een naam om die speler te lenen. Hij of zij doet dan als gast mee in jullie indeling en de coach van dat team krijgt een melding.</p>`:""}
+      ${b&&b.teams&&b.teams.length?`<p class="note">Tik op een naam om die speler aan te vragen. De coach van dat team krijgt een melding en moet eerst akkoord geven. Daarna doet het kind als gast mee. Tik nog een keer om de aanvraag in te trekken.</p>
+      ${loans().filter(l=>l.dir==="in"&&l.match_id===m.id&&!(b.teams||[]).some(t=>t.team===l.lender)).map(l=>`<div class="note">${l.status==="approved"?"✓":l.status==="requested"?"⏳":"✗"} ${esc(l.player_name)} van ${esc(l.lender)}</div>`).join("")}`:""}
     </div>`}
   if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?(present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."):"De coach heeft voor deze wedstrijd nog geen indeling gemaakt."}</div></div>`;bindPlan(el);bindMatchBar();return}
   const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
@@ -867,8 +872,9 @@ function swapKeeper(q,newId){const p=P(),old=p.keepers[q],io=p.ids.indexOf(old),
   save();renderPlan();
   toast(`${nameOf(newId)} keept kwart ${q+1}, ${nameOf(old)} neemt de plek van ${nameOf(newId)} over`)}
 let BORROW={};
-async function doLoan(d){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"add",p_data:Object.assign({match:CUR},d)});DATA.rev=0;await poll(true);toast("Geleend. Druk op Start om de indeling te maken.")}catch(e){toast(errText(e))}}
-async function undoLoan(id){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"remove",p_data:{id}});DATA.rev=0;await poll(true);toast("Lenen ongedaan gemaakt")}catch(e){toast(errText(e))}}
+async function doLoan(d){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"add",p_data:Object.assign({match:CUR},d)});DATA.rev=0;await poll(true);toast("Aanvraag verstuurd. Je krijgt een melding als er akkoord is.")}catch(e){toast(errText(e))}}
+async function undoLoan(id){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"remove",p_data:{id}});DATA.rev=0;await poll(true);toast("Aanvraag ingetrokken")}catch(e){toast(errText(e))}}
+async function answerLoan(id,ok){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"respond",p_data:{id,ok}});DATA.rev=0;CLUBLOANS=CLUBLOANS.filter(x=>x.id!==id);await poll(true);toast(ok?"Akkoord gegeven":"Verzoek geweigerd")}catch(e){toast(errText(e))}}
 async function loadBorrow(mid){BORROW[mid]="loading";renderPlan();
   try{BORROW[mid]=await rpc("app_borrow_candidates",{p_token:AUTH.token,p_match:mid})}catch(e){BORROW[mid]="err"}if(view==="plan")renderPlan()}
 function bindPlan(el){
@@ -1067,10 +1073,15 @@ function renderTeam(){
   }else{
     h+=`<h2>Spelers (${pl.length})</h2><div class="card"><div class="chips">${pl.map(p=>`<span class="chip">${esc(nameOf(p.id))}</span>`).join("")}</div></div>`;
   }
-  const L=loans();
+  const L=loans().filter(l=>l.status!=="declined"||l.dir==="in");
+  const LR=loans().filter(l=>l.dir==="out"&&l.status==="requested");
+  if(LR.length&&!viewer)h=`<h2>Leenverzoeken (${LR.length})</h2>`+LR.map(l=>`<div class="card req"><div class="q-title">${esc(l.player_name.split(/\s+/)[0])}</div>
+      <div class="note"><b>${esc(l.created_by)}</b> van ${esc(l.borrower)} wil ${esc(l.player_name.split(/\s+/)[0])} lenen voor ${fmtDate(l.match_date)}${l.kickoff?" om "+esc(l.kickoff):""}${l.opponent?" tegen "+esc(l.opponent):""}.</div>
+      <div class="row"><button type="button" class="btn primary" data-lok="${l.id}">✓ Akkoord</button><button type="button" class="btn danger" data-lno="${l.id}">Weigeren</button></div></div>`).join("")+h;
   if(L.length){h+=`<h2>Geleend & uitgeleend</h2><div class="card">${L.map(l=>{const sc=l.home?[l.wij,l.zij]:[l.zij,l.wij];
       const title=l.home?`${l.borrower} – ${l.opponent||"tegenstander"}`:`${l.opponent||"tegenstander"} – ${l.borrower}`;
-      return `<div class="loanrow"><div class="lockrow"><b>${l.dir==="in"?"⬅ Geleend":"➡ Uitgeleend"}: ${esc(l.player_name.split(/\s+/)[0])}</b><span class="note">${fmtDate(l.match_date)}</span></div>
+      const stl=l.status==="requested"?" · ⏳ wacht op akkoord":l.status==="declined"?" · ✗ geweigerd":"";
+      return `<div class="loanrow"><div class="lockrow"><b>${l.dir==="in"?"⬅ Geleend":"➡ Uitgeleend"}: ${esc(l.player_name.split(/\s+/)[0])}${stl}</b><span class="note">${fmtDate(l.match_date)}</span></div>
         <div class="note">${l.dir==="in"?"van "+esc(l.lender):"aan "+esc(l.borrower)} · ${esc(title)}${l.wij+l.zij||l.closed?` · <b>${sc[0]} – ${sc[1]}</b>`:""}${l.goals?` · ⚽ ${l.goals}× gescoord`:""}</div></div>`}).join("")}</div>`}
   const {rows}=seasonStats();
   h+=`<h2>Seizoen per speler</h2><div class="gridwrap"><table class="tt"><thead><tr><th>Speler</th><th>Wedstr.</th><th>Min.</th><th>🧤 Kw.</th>${feat("goals")?"<th>⚽</th>":""}</tr></thead><tbody>
@@ -1084,7 +1095,7 @@ function renderTeam(){
       <p class="note">${adm?"Als beheerder kun je rollen wijzigen, beheerders aanwijzen en leden verwijderen.":"Alleen de beheerder kan rollen wijzigen."}</p></div>`}
   if(!viewer){if(PUSH.state==="on"||PUSH.state==="unknown")h+=pushCard();else{const k=h.indexOf("<h2>Mijn account</h2>");h=k>=0?h.slice(0,k)+pushCard()+h.slice(k):pushCard()+h}}
   h+=`<p class="disclaimer">Wissel App v${APP_VERSION} · Dit is geen officiële app van SDW. · <button type="button" class="linkbtn" id="replayintro" style="margin:0;font-size:12px">▶ Intro bekijken</button></p>`;
-  if(me.is_super){const cr=CLUB&&CLUB!=="err"&&((CLUB.requests||[]).length||UPLOADS.length);h=cr?renderClub()+h:h+renderClub()}
+  if(me.is_super){const cr=CLUB&&CLUB!=="err"&&((CLUB.requests||[]).length||UPLOADS.length||CLUBLOANS.length);h=cr?renderClub()+h:h+renderClub()}
   el.innerHTML=h;
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   if(me.is_super)bindClub(el);bindPush(el);
@@ -1096,6 +1107,8 @@ function renderTeam(){
   el.querySelectorAll("[data-inv]").forEach(b=>b.onclick=()=>copyText(inviteText(),"Uitnodiging gekopieerd. Plak hem in WhatsApp."));
   el.querySelectorAll("[data-newcode]").forEach(b=>b.onclick=async()=>{if(delArm!=="cadmin"){arm("cadmin",4000);renderTeam();return}delArm=null;
     try{await act("codes_new",{});toast("Nieuwe beheerderscode gemaakt")}catch(e){toast(errText(e))}});
+  el.querySelectorAll("[data-lok]").forEach(b=>b.onclick=()=>{b.disabled=true;answerLoan(+b.dataset.lok,true)});
+  el.querySelectorAll("[data-lno]").forEach(b=>b.onclick=()=>{b.disabled=true;answerLoan(+b.dataset.lno,false)});
   el.querySelectorAll("[data-approve]").forEach(b=>b.onclick=async()=>{const id=b.dataset.approve,role=el.querySelector(`[data-reqrole="${id}"]`).value,x=(DATA.requests||[]).find(r=>r.id===id);
     DATA.requests=(DATA.requests||[]).filter(r=>r.id!==id);renderTeam();
     try{await act("approve",{member:id,role});toast(`${x?x.name:"Lid"} is geaccepteerd als ${ROLE[role].toLowerCase()}`)}catch(e){toast(errText(e));DATA.rev=0}});
@@ -1131,8 +1144,8 @@ function renderPending(){const el=$("#v-agenda"),me=DATA.me;
 
 /* ---------- clubbeheer ---------- */
 let CLUB=null,clubLoading=false;
-let UPLOADS=[],upOpen={};
-async function loadClub(){if(clubLoading)return;clubLoading=true;try{CLUB=await rpc("app_club",{p_token:AUTH.token,p_action:"list",p_data:{}});UPLOADS=(await rpc("app_club_uploads",{p_token:AUTH.token,p_done_id:null})).uploads||[]}catch(e){CLUB="err"}clubLoading=false;if(view==="team"&&!(document.activeElement&&document.activeElement.id==="clubname"))renderTeam()}
+let UPLOADS=[],upOpen={},CLUBLOANS=[];
+async function loadClub(){if(clubLoading)return;clubLoading=true;try{CLUB=await rpc("app_club",{p_token:AUTH.token,p_action:"list",p_data:{}});UPLOADS=(await rpc("app_club_uploads",{p_token:AUTH.token,p_done_id:null})).uploads||[];CLUBLOANS=await rpc("app_club_loans",{p_token:AUTH.token})||[]}catch(e){CLUB="err"}clubLoading=false;if(view==="team"&&!(document.activeElement&&document.activeElement.id==="clubname"))renderTeam()}
 async function club(a,d){try{await rpc("app_club",{p_token:AUTH.token,p_action:a,p_data:d||{}});return true}catch(e){toast(errText(e));return false}finally{loadClub()}}
 function renderClub(){
   if(CLUB===null){loadClub();return `<h2>Clubbeheer</h2><p class="note">Laden…</p>`}
@@ -1144,6 +1157,9 @@ function renderClub(){
       <button type="button" class="shot${upOpen[u.id]?" open":""}" data-upview="${u.id}" aria-label="Screenshot vergroten"><img src="${u.image}" alt="Screenshot van het programma van ${esc(u.team)}"></button>
       <div class="row"><button type="button" class="btn primary" data-updone="${u.id}">✓ Ingevoerd</button></div>
       <p class="note">Voer de wedstrijden in (of stuur de screenshot door) en tik daarna op Ingevoerd.</p></div>`).join("");
+  if(CLUBLOANS.length)h+=`<h2>Leenverzoeken voor teams zonder coach (${CLUBLOANS.length})</h2>`+CLUBLOANS.map(l=>`<div class="card req"><div class="q-title">${esc(l.player_name)}</div>
+      <div class="note"><b>${esc(l.created_by)}</b> van ${esc(l.borrower)} wil ${esc(l.player_name.split(/\s+/)[0])} van <b>${esc(l.lender)}</b> lenen voor ${fmtDate(l.match_date)}${l.kickoff?" om "+esc(l.kickoff):""}. ${esc(l.lender)} heeft nog geen coach in de app, daarom beslis jij.</div>
+      <div class="row"><button type="button" class="btn primary" data-lok="${l.id}">✓ Akkoord</button><button type="button" class="btn danger" data-lno="${l.id}">Weigeren</button></div></div>`).join("");
   h+=`<h2>Clubbeheer · nieuwe teams${rq.length?` (${rq.length})`:""}</h2>`;
   h+=rq.length?rq.map(x=>`<div class="card req"><div class="q-title">${esc(x.name)}</div><div class="note">Wil beheerder worden van <b>${esc(x.team)}</b> als ${ROLE[x.role].toLowerCase()}${x.note?" · ouder van "+esc(x.note):""} · ${fmtAgo(x.created_at)}</div>
       <div class="row"><button type="button" class="btn primary" data-capprove="${x.id}">✓ Accepteren als beheerder</button><button type="button" class="btn danger" data-creject="${x.id}">${delArm==="cr"+x.id?"Zeker?":"Weigeren"}</button></div></div>`).join("")
@@ -1191,7 +1207,7 @@ async function pushDisable(){try{const reg=await navigator.serviceWorker.ready;c
     if(sub){await rpc("app_push_unsubscribe",{p_token:AUTH.token,p_endpoint:sub.endpoint}).catch(()=>{});await sub.unsubscribe()}PUSH.state="off";toast("Meldingen uit")}catch(e){toast("Uitzetten lukt niet")}renderTeam()}
 function pushCard(){const st=PUSH.state,adm=isAdmin();
   if(st==="unknown")setTimeout(()=>pushCheck().then(()=>{if(view==="team"&&PUSH.state!=="unknown")renderTeam()}),0);
-  const what=`<ul class="plist">${adm?"<li>Iemand vraagt toegang die jij moet goedkeuren</li>":""}<li>Een wedstrijd wordt toegevoegd of gewijzigd door een andere trainer</li></ul>`;
+  const what=`<ul class="plist">${adm?"<li>Iemand vraagt toegang die jij moet goedkeuren</li>":""}<li>Een wedstrijd wordt toegevoegd of gewijzigd door een andere trainer</li><li>Een ander team een speler van jullie wil lenen, of antwoordt op jullie leenverzoek</li></ul>`;
   let body;
   if(st==="apk")body=`<p class="note">In de APK-app werken meldingen niet. Open <b>${esc(PAGE_URL)}</b> in Chrome, kies <b>⋮ → Toevoegen aan startscherm</b> en zet daar de meldingen aan.</p><div class="row"><button type="button" class="btn" id="pcopy">Kopieer link</button></div>`;
   else if(st==="unsupported")body=`<p class="note">Deze browser ondersteunt geen meldingen. Gebruik Chrome op Android.</p>`;
@@ -1263,7 +1279,7 @@ function show(v,keep){renderInstall();
   $("#t-live").hidden=!feat("live");$("#t-goals").hidden=!feat("goals");
   view=v;VIEWS.forEach(k=>{$("#v-"+k).hidden=k!==v;$("#t-"+k).setAttribute("aria-selected",k===v)});
   $("#viewbar").hidden=!VIEW;if(VIEW)$("#viewname").textContent=VIEW.name;
-  const nr=(DATA.requests||[]).length;$("#t-team").innerHTML="Team"+(nr?`<span class="dot">${nr}</span>`:"");
+  const nr=(DATA.requests||[]).length+loans().filter(l=>l.dir==="out"&&l.status==="requested").length+(DATA.me&&DATA.me.is_super?CLUBLOANS.length:0);$("#t-team").innerHTML="Team"+(nr?`<span class="dot">${nr}</span>`:"");
   $("#hname").textContent=DATA.team.name;$("#crest").textContent=initials(DATA.team.name);
   $("#hsub").textContent=`${DATA.me.name} · ${ROLE[DATA.me.role]}`;
   if(v==="team"&&!keep)CLUB=null;
