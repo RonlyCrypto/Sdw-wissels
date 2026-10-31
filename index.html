@@ -310,6 +310,9 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .kbtn{cursor:pointer;font:inherit;font-weight:700;font-size:13px}
 .klist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;text-align:left}
 .klist button{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);font:600 15px var(--body);cursor:pointer}
+.seg.col{flex-direction:column}
+.seg.col button{border-right:0;border-bottom:1px solid var(--line);text-align:left;padding:11px 12px}
+.seg.col button:last-child{border-bottom:0}
 </style>
 
 </head>
@@ -376,7 +379,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.2.1";
+const APP_VERSION="3.3.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -444,7 +447,7 @@ function ensureCur(){if(!curMatch())CUR=pickDefault();if(!VIEW)ls.set(CURKEY,CUR
 function buildS(){const m=curMatch();if(!m){S=null;return}
   const st=m.state||{},set=settings();
   S={players:activePlayers().map(p=>({id:p.id,name:p.name,canKeep:p.canKeep!==false,present:m.attendance[p.id]!==false})),
-    pair:(set.pair||[]).slice(0,2),fieldSize:set.fieldSize||6,
+    pair:(set.pair||[]).slice(0,2),fieldSize:set.fieldSize||6,subMode:set.subMode||"5min",
     keeperPick:(st.keeperPick||[null,null,null,null]).slice(),plan:st.plan||null,done:(st.done||[]).slice(),
     live:Object.assign({elapsed:0,startedAt:null,stopAt:null},st.live||{}),locked:!!st.locked}}
 function matchTitle(m){const me=DATA.team.name,op=m.opponent||"tegenstander";return m.home?`${me} – ${op}`:`${op} – ${me}`}
@@ -503,22 +506,27 @@ function evalCost(on,n,pa,pb,kIdx){
   for(let p=0;p<n;p++){let run=0;for(let u=0;u<=N;u++){if(u<N&&!on[p*N+u]){run++;continue}if(run>1)c+=(run-1)*25;run=0}}
   return c;
 }
-function solve(n,kIdx,F,pa,pb){
+const SUBMODES={"5min":"Elke 5 minuten","kwart":"Alleen per kwart","laatste":"Per kwart, laatste kwart ook halverwege"};
+function midOK(q,sm){return sm==="5min"||(sm==="laatste"&&q===Q-1)}
+function solve(n,kIdx,F,pa,pb,sm){
+  sm=sm||"5min";
+  const grp=u=>{const q=Math.floor(u/QU);if(midOK(q,sm))return [u];return [q*QU,q*QU+1]};
   let best=null,bestCost=Infinity;const on=new Uint8Array(n*N);
   for(let r=0;r<5;r++){
     on.fill(0);
     for(let u=0;u<N;u++){const k=kIdx[Math.floor(u/QU)];on[k*N+u]=2;
+      if(u%QU&&!midOK(Math.floor(u/QU),sm)){for(let p=0;p<n;p++)if(p!==k&&on[p*N+u-1]===1)on[p*N+u]=1;continue}
       for(const p of shuffle([...Array(n).keys()].filter(p=>p!==k)).slice(0,F))on[p*N+u]=1}
     let cost=evalCost(on,n,pa,pb,kIdx);
     const I=15000;
     for(let i=0;i<I;i++){
-      const temp=100*Math.pow(0.0005,i/I),u=rnd(N),k=kIdx[Math.floor(u/QU)],A=[],B=[];
-      for(let p=0;p<n;p++){if(p===k)continue;if(on[p*N+u])A.push(p);else B.push(p)}
+      const temp=100*Math.pow(0.0005,i/I),u=rnd(N),k=kIdx[Math.floor(u/QU)],G=grp(u),A=[],B=[];
+      for(let p=0;p<n;p++){if(p===k)continue;if(G.every(g=>on[p*N+g]===1))A.push(p);else if(G.every(g=>on[p*N+g]===0))B.push(p)}
       if(!A.length||!B.length)continue;
-      const p=A[rnd(A.length)],q=B[rnd(B.length)];on[p*N+u]=0;on[q*N+u]=1;
+      const p=A[rnd(A.length)],q=B[rnd(B.length)];for(const g of G){on[p*N+g]=0;on[q*N+g]=1}
       const c=evalCost(on,n,pa,pb,kIdx);
       if(c<=cost||Math.random()<Math.exp((cost-c)/temp)){cost=c;if(c<bestCost){bestCost=c;best=on.slice()}}
-      else{on[p*N+u]=1;on[q*N+u]=0}
+      else{for(const g of G){on[p*N+g]=1;on[q*N+g]=0}}
     }
     if(!best){best=on.slice();bestCost=cost}
   }
@@ -542,16 +550,16 @@ function generate(mode){
     if(!pick)pick=order[0];keepers[b]=pick;used[pick]=(used[pick]||0)+1}
   const kIdx=keepers.map(k=>ids.indexOf(k));
   const ok=S.pair[0]!==S.pair[1];
-  const on=solve(n,kIdx,F,ok?ids.indexOf(S.pair[0]):-1,ok?ids.indexOf(S.pair[1]):-1);
+  const on=solve(n,kIdx,F,ok?ids.indexOf(S.pair[0]):-1,ok?ids.indexOf(S.pair[1]):-1,S.subMode);
   const grid=ids.map((_,p)=>Array.from({length:N},(_,u)=>on[p*N+u]));
-  S.plan={ids,keepers,grid,fs,v:3};S.done=[];
+  S.plan={ids,keepers,grid,fs,v:3,sm:S.subMode};S.done=[];
   if(!S.live.startedAt)S.live={elapsed:0,startedAt:null,stopAt:null};
   save();
 }
 function planValid(){
   const P=S.plan;if(!P||P.v!==3)return false;
   const ids=S.players.filter(p=>p.present).map(p=>p.id);
-  return P.ids.length===ids.length&&P.ids.every((x,i)=>x===ids[i])&&P.fs===Math.min(S.fieldSize,ids.length)
+  return P.ids.length===ids.length&&P.ids.every((x,i)=>x===ids[i])&&P.fs===Math.min(S.fieldSize,ids.length)&&(P.sm||"5min")===S.subMode
     &&S.keeperPick.every((k,b)=>!k||!ids.includes(k)||P.keepers[b]===k);
 }
 const P=()=>S.plan;
@@ -770,7 +778,7 @@ function renderPlan(){
   const doneCount=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length&&S.done[u]).length;
   h+=`<div class="summary">
     <div class="big">${mx===mn?`Iedereen speelt ${mx} minuten`:`Iedereen speelt ${mn}–${mx} minuten`}</div>
-    <div class="sub">${p.ids.length} spelers · ${p.fs} op het veld · 4 × 10 min · wissel elke 5 min${S.pair[0]!==S.pair[1]&&staff?` · ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} nooit samen op de bank`:""}</div>
+    <div class="sub">${p.ids.length} spelers · ${p.fs} op het veld · 4 × 10 min · ${{"5min":"wissel elke 5 min","kwart":"wissel per kwart","laatste":"wissel per kwart, laatste kwart ook halverwege"}[p.sm||"5min"]}${S.pair[0]!==S.pair[1]&&staff?` · ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} nooit samen op de bank`:""}</div>
     ${staff&&mx!==mn?`<div class="note">Met ${p.ids.length} spelers kan het niet precies gelijk. Met “Hussel spelers” krijgen andere kinderen de extra 5 minuten.</div>`:""}
     ${staff&&viol?`<div class="warn">Let op: in ${viol} blok(ken) lukt de regel voor ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} niet.</div>`:""}
     <div class="sub"><b>${doneCount} van ${subsTotal}</b> wissels gedaan</div>
@@ -1006,7 +1014,8 @@ function renderTeam(){
       <p class="note">Het wisselschema en de agenda staan altijd aan. Wat je uitzet, verdwijnt voor iedereen in het team. Er gaat niets verloren: zet je het weer aan, dan is alles er nog.</p></div>`:""}
     <h2>Wedstrijdvorm</h2><div class="card">
       <div class="field"><label>Spelers in het veld (met keeper)</label><div class="seg">${[5,6,7,8].map(n=>`<button type="button" data-fs="${n}" aria-pressed="${(set.fieldSize||6)===n}">${n}</button>`).join("")}</div></div>
-      <p class="note">4 kwarten van 10 minuten. Keeper wisselt in de pauze, spelers wisselen elke 5 minuten.</p></div>`;
+      <div class="field"><label>Wanneer wisselen</label><div class="seg col">${Object.entries(SUBMODES).map(([k,v])=>`<button type="button" data-sm="${k}" aria-pressed="${(set.subMode||"5min")===k}">${v}</button>`).join("")}</div></div>
+      <p class="note">4 kwarten van 10 minuten. De keeper wisselt altijd in de pauze. Minder wisselmomenten betekent soms iets minder gelijke speeltijd. Na een wijziging druk je bij Indeling op Start.</p></div>`;
   }else{
     h+=`<h2>Spelers (${pl.length})</h2><div class="card"><div class="chips">${pl.map(p=>`<span class="chip">${esc(nameOf(p.id))}</span>`).join("")}</div></div>`;
   }
@@ -1051,6 +1060,7 @@ function renderTeam(){
   const pa=$("#pa"),pb=$("#pb");if(pa){const f=()=>{const s=cloneSet();s.pair=[pa.value||null,pb.value||null];saveSettings(s)};pa.onchange=f;pb.onchange=f}
   el.querySelectorAll("[data-feat]").forEach(x=>x.onclick=()=>{const s=cloneSet(),k=x.dataset.feat,v=!feat(k);s.features=Object.assign({},s.features||{},{[k]:v});saveSettings(s);
     toast(`${FEATURES.find(f=>f.k===k).name} ${v?"aan":"uit"}`);show("team",true)});
+  el.querySelectorAll("[data-sm]").forEach(x=>x.onclick=()=>{const s=cloneSet();s.subMode=x.dataset.sm;saveSettings(s);renderTeam();toast(SUBMODES[x.dataset.sm])});
   el.querySelectorAll("[data-fs]").forEach(x=>x.onclick=()=>{const s=cloneSet();s.fieldSize=+x.dataset.fs;saveSettings(s);renderTeam()});
   el.querySelectorAll("[data-role]").forEach(s=>s.onchange=async()=>{try{await act("member_role",{member:s.dataset.role,role:s.value});toast("Rol gewijzigd")}catch(e){toast(errText(e));DATA.rev=0;renderTeam()}});
   el.querySelectorAll("[data-mrem]").forEach(b=>b.onclick=async()=>{const id=b.dataset.mrem;if(delArm!=="r"+id){arm("r"+id);renderTeam();return}delArm=null;
