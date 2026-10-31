@@ -318,6 +318,9 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .staffline::before{content:"Staf:";color:var(--muted);font-weight:700;margin-right:-4px}
 .staffline .yes{color:var(--field)}.staffline .no{color:var(--red);text-decoration:line-through}
 .seg.att button[data-meatt$="|0"][aria-pressed="true"]{background:var(--red);color:#fff}
+.card.borrow{border-color:var(--keeper)}
+.card.borrow p{margin:0}
+.bteam{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:10px}
 </style>
 
 </head>
@@ -384,7 +387,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.4.1";
+const APP_VERSION="3.5.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -785,6 +788,16 @@ function renderPlan(){
       <div class="note">${present.length} spelers${abs.length?` · afwezig: ${abs.map(x=>esc(nameOf(x.id))).join(", ")}`:""}</div>
       ${L?`<div class="note">🔒 De coach heeft deze indeling vastgezet.</div>`:""}</div>`;
   }
+  if(staff&&!m.closed&&present.length<=Math.min(S.fieldSize,99)){const b=BORROW[m.id];
+    h+=`<div class="card borrow"><div class="q-title">⚠️ Geen wissels</div>
+      <p class="note">Je hebt ${present.length} spelers en er moeten er ${S.fieldSize} in het veld${present.length<S.fieldSize?`: je komt er ${S.fieldSize-present.length} tekort`:", dus er is niemand om te wisselen"}. Misschien kun je een speler lenen van een team dat vandaag eerder klaar is.</p>
+      ${!b?`<button type="button" class="btn primary" id="borrowgo">Wie kan ik lenen?</button>`:b==="loading"?`<p class="note">Zoeken…</p>`:b==="err"?`<p class="note">Kon de teams niet ophalen.</p>`:
+        !b.teams.length?`<p class="note">Er is vandaag geen ander team dat${b.my_kickoff?" vóór "+esc(b.my_kickoff):""} al klaar is.</p>`:
+        b.teams.map(t=>`<div class="bteam"><div class="lockrow"><b>${esc(t.team)}</b><span class="badge sel">klaar ±${esc(t.ends)}</span></div>
+          <div class="note">Speelt om ${esc(t.kickoff)}${t.opponent?" tegen "+esc(t.opponent):""} (${t.home?"thuis":"uit"})</div>
+          <div class="note">${t.staff.length?t.staff.map(x=>`${x.role==="manager"?"Teamleider":"Coach"}: <b>${esc(x.name)}</b>`).join(" · "):"Nog geen coach of teamleider in de app"}</div>
+          <div class="chips">${t.players.map(n=>`<span class="chip">${esc(n.split(/\s+/)[0])}</span>`).join("")||`<span class="note">Nog geen spelers in de app</span>`}</div></div>`).join("")}
+    </div>`}
   if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?(present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."):"De coach heeft voor deze wedstrijd nog geen indeling gemaakt."}</div></div>`;bindPlan(el);bindMatchBar();return}
   const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
   let viol=0;if(S.pair[0]!==S.pair[1])for(let u=0;u<N;u++){const b=benchAt(u),k=keeperAt(u),[a,c]=S.pair;
@@ -843,7 +856,11 @@ function swapKeeper(q,newId){const p=P(),old=p.keepers[q],io=p.ids.indexOf(old),
     generate("players");renderPlan();toast(`${nameOf(newId)} keept kwart ${q+1}. Speeltijd opnieuw eerlijk verdeeld.`);return}
   save();renderPlan();
   toast(`${nameOf(newId)} keept kwart ${q+1}, ${nameOf(old)} neemt de plek van ${nameOf(newId)} over`)}
+let BORROW={};
+async function loadBorrow(mid){BORROW[mid]="loading";renderPlan();
+  try{BORROW[mid]=await rpc("app_borrow_candidates",{p_token:AUTH.token,p_match:mid})}catch(e){BORROW[mid]="err"}if(view==="plan")renderPlan()}
 function bindPlan(el){
+  const bg=$("#borrowgo");if(bg)bg.onclick=()=>loadBorrow(CUR);
   const ul=$("#unlock");if(ul)ul.onclick=()=>{S.locked=false;save();renderPlan();toast("Indeling losgemaakt")};
   el.querySelectorAll("[data-kq]").forEach(x=>x.onchange=()=>{S.keeperPick[+x.dataset.kq]=x.value||null;save();x.blur();renderPlan()});
   el.querySelectorAll("[data-pq]").forEach(x=>x.onclick=()=>{const pl=S.players.find(y=>y.id===x.dataset.pq);
