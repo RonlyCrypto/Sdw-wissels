@@ -313,6 +313,11 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .seg.col{flex-direction:column}
 .seg.col button{border-right:0;border-bottom:1px solid var(--line);text-align:left;padding:11px 12px}
 .seg.col button:last-child{border-bottom:0}
+.kidrow.me{background:var(--field-soft);border-color:var(--field);color:var(--ink)}
+.staffline{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;font-weight:600}
+.staffline::before{content:"Staf:";color:var(--muted);font-weight:700;margin-right:-4px}
+.staffline .yes{color:var(--field)}.staffline .no{color:var(--red);text-decoration:line-through}
+.seg.att button[data-meatt$="|0"][aria-pressed="true"]{background:var(--red);color:#fff}
 </style>
 
 </head>
@@ -379,7 +384,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.3.2";
+const APP_VERSION="3.4.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -653,6 +658,11 @@ function matchCard(m){
   let h=`<article class="q mcard${m.id===CUR?" cur":""}${m.closed?" closed":""}"><button type="button" class="q-head pick" data-pick="${m.id}" aria-pressed="${m.id===CUR}"><div class="q-title">${fmtDate(m.match_date)}${m.kickoff?`<small>${esc(m.kickoff)}</small>`:""}</div>
     <div class="row">${m.id===CUR?`<span class="badge sel">✓ Gekozen</span>`:""}${m.closed?`<span class="badge lock">🔒 Afgerond</span>`:m.match_date===t?`<span class="badge">Vandaag</span>`:""}<span class="chip ${m.home?"":"bench"}">${m.home?"Thuis":"Uit"}</span></div></button><div class="q-body">
     <div class="mtitle"><span>${esc(matchTitle(m))}</span>${feat("goals")&&(played(m)||(m.goals||[]).length)?`<b class="score">${sc[0]} – ${sc[1]}</b>`:""}</div>`;
+  {const staffM=(DATA.members||[]).filter(x=>x.role==="manager"||x.role==="coach");
+    const me=DATA.me,mine=m.attendance["m:"+me.id];
+    if(!VIEW&&me.role!=="viewer"&&!m.closed&&!played(m))h+=`<div class="kidrow me"><span><b>Ben jij erbij?</b></span><div class="seg att"><button type="button" data-meatt="${m.id}|1" aria-pressed="${mine!==false}">Ja</button><button type="button" data-meatt="${m.id}|0" aria-pressed="${mine===false}">Nee</button></div></div>`;
+    const absent=staffM.filter(x=>m.attendance["m:"+x.id]===false);
+    if(staffM.length>1||absent.length)h+=`<div class="staffline">${staffM.map(x=>{const a=m.attendance["m:"+x.id]!==false;return `<span class="${a?"yes":"no"}">${a?"✓":"✗"} ${esc(x.name.split(/\s+/)[0])}</span>`}).join("")}</div>`}
   if(kids.length&&!played(m))h+=kids.map(k=>`<div class="kidrow"><span><b>Is ${esc(nameOf(k))} erbij?</b></span>${attSeg(m,k,true)}</div>`).join("");
   h+=`<div class="attsum"><span class="yes">✓ ${c.y}</span><span class="no">✗ ${c.n}</span><span>? ${c.q}</span><button type="button" class="linkbtn" data-open="${m.id}">${isOpen?"Verberg":"Wie is er?"}</button></div>`;
   if(isOpen)h+=`<div class="attlist">${activePlayers().map(p=>`<div class="attrow"><span>${esc(nameOf(p.id))}</span>${attSeg(m,p.id,staff||kids.includes(p.id))}</div>`).join("")}
@@ -692,6 +702,8 @@ function renderAgenda(){
   const sf=$("#schedfile");if(sf)sf.onchange=()=>{const f=sf.files&&sf.files[0];if(f)sendSchedule(f);sf.value=""};on("#gokids",()=>show("team"));
   el.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>{const [mid,pid,v]=b.dataset.att.split("|");const m=matches().find(x=>x.id===mid);
     const val=v==="1";setAtt(mid,pid,m.attendance[pid]===val?null:val)});
+  el.querySelectorAll("[data-meatt]").forEach(b=>b.onclick=()=>{const [mid,v]=b.dataset.meatt.split("|");setAtt(mid,"m:"+DATA.me.id,v==="1"?null:false);
+    toast(v==="1"?"Je staat op aanwezig":"Je staat op afwezig")});
   el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{openAtt[b.dataset.open]=!openAtt[b.dataset.open];renderAgenda()});
   el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const id=b.dataset.pick;if(id===CUR)return;selectMatch(id);renderAgenda();const m=curMatch();toast(`Alle tabs tonen nu ${fmtDate(m.match_date)}`)});
   bindClose(el);
