@@ -379,7 +379,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.3.0";
+const APP_VERSION="3.3.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -752,8 +752,8 @@ function renderPlan(){
     const kOpts=b=>`<option value="">Automatisch</option>`+present.map(x=>`<option value="${x.id}"${S.keeperPick[b]===x.id?" selected":""}>${esc(nameOf(x.id))}</option>`).join("");
     const dupK=S.keeperPick.filter(Boolean).length!==new Set(S.keeperPick.filter(Boolean)).size;
     h+=`<div class="card"><div class="q-title">Wie is er?</div>
-      <div class="chips">${S.players.map(x=>{const a=m.attendance[x.id];return `<button type="button" class="chip-t${a===undefined?" unk":""}" data-pq="${x.id}" aria-pressed="${x.present}">${x.present?(a===true?"✓ ":"? "):"✗ "}${esc(nameOf(x.id))}</button>`}).join("")}</div>
-      <div class="note">Tik op een naam om iemand op afwezig te zetten. ${present.length} van ${S.players.length} aanwezig. Een ? betekent dat de ouder nog niets heeft ingevuld.</div>
+      <div class="chips">${S.players.map(x=>{const a=m.attendance[x.id];return `<button type="button" class="chip-t" data-pq="${x.id}" aria-pressed="${x.present}">${x.present?"✓ ":"✗ "}${esc(nameOf(x.id))}</button>`}).join("")}</div>
+      <div class="note">Tik op een naam om iemand op afwezig te zetten. ${present.length} van ${S.players.length} aanwezig.</div>
       <div class="q-title">Keepers kiezen</div>
       <div class="two">${[0,1,2,3].map(b=>`<div class="field"><label for="kq${b}">Kwart ${b+1} · ${b*10}–${b*10+10} min</label><select id="kq${b}" data-kq="${b}">${kOpts(b)}</select></div>`).join("")}</div>
       ${dupK?`<div class="note">Eén kind keept meer dan één kwart. Dat mag, de speeltijd wordt dan anders verdeeld.</div>`:""}
