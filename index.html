@@ -384,7 +384,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.4.0";
+const APP_VERSION="3.4.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -640,7 +640,7 @@ let agMenu=false;
 document.addEventListener("click",e=>{if(agMenu&&!e.target.closest(".menuwrap")){agMenu=false;if(view==="agenda")renderAgenda()}});
 let agendaEdit=null, openAtt={}, delArm=null;
 function arm(key,ms){delArm=key;setTimeout(()=>{if(delArm===key){delArm=null;show(view,true)}},ms||3000)}
-function attCounts(m){let y=0,n=0,q=0;activePlayers().forEach(p=>{const a=m.attendance[p.id];if(a===true)y++;else if(a===false)n++;else q++});return {y,n,q}}
+function attCounts(m){let y=0,n=0;activePlayers().forEach(p=>{if(m.attendance[p.id]===false)n++;else y++});return {y,n}}
 function attSeg(m,pid,editable){const a=m.attendance[pid];
   if(!editable)return `<span class="attv ${a===true?"yes":a===false?"no":""}">${a===true?"✓ Ja":a===false?"✗ Nee":"?"}</span>`;
   return `<div class="seg att"><button type="button" data-att="${m.id}|${pid}|1" aria-pressed="${a===true}">Ja</button><button type="button" data-att="${m.id}|${pid}|0" aria-pressed="${a===false}">Nee</button></div>`}
@@ -664,9 +664,10 @@ function matchCard(m){
     const absent=staffM.filter(x=>m.attendance["m:"+x.id]===false);
     if(staffM.length>1||absent.length)h+=`<div class="staffline">${staffM.map(x=>{const a=m.attendance["m:"+x.id]!==false;return `<span class="${a?"yes":"no"}">${a?"✓":"✗"} ${esc(x.name.split(/\s+/)[0])}</span>`}).join("")}</div>`}
   if(kids.length&&!played(m))h+=kids.map(k=>`<div class="kidrow"><span><b>Is ${esc(nameOf(k))} erbij?</b></span>${attSeg(m,k,true)}</div>`).join("");
-  h+=`<div class="attsum"><span class="yes">✓ ${c.y}</span><span class="no">✗ ${c.n}</span><span>? ${c.q}</span><button type="button" class="linkbtn" data-open="${m.id}">${isOpen?"Verberg":"Wie is er?"}</button></div>`;
-  if(isOpen)h+=`<div class="attlist">${activePlayers().map(p=>`<div class="attrow"><span>${esc(nameOf(p.id))}</span>${attSeg(m,p.id,staff||kids.includes(p.id))}</div>`).join("")}
-    ${staff?`<p class="note">Niet ingevuld (?) telt in de indeling als aanwezig.</p>`:""}</div>`;
+  h+=`<div class="attsum"><span class="yes">✓ ${c.y}</span><span class="no">✗ ${c.n}</span><button type="button" class="linkbtn" data-open="${m.id}">${isOpen?"Verberg":"Wie is er?"}</button></div>`;
+  if(isOpen)h+=`<div class="chips attchips">${activePlayers().map(p=>{const a=m.attendance[p.id]!==false;
+      return staff?`<button type="button" class="chip-t" data-atog="${m.id}|${p.id}" aria-pressed="${a}">${a?"✓ ":"✗ "}${esc(nameOf(p.id))}</button>`:`<span class="chip${a?"":" bench"}">${a?"✓":"✗"} ${esc(nameOf(p.id))}</span>`}).join("")}</div>
+    ${staff?`<p class="note">Tik op een naam om iemand op afwezig te zetten.</p>`:""}`;
   h+=`<div class="row"><button class="btn primary" type="button" data-goplan="${m.id}">Indeling ›</button>${feat("goals")&&((m.goals||[]).length||played(m))?`<button class="btn" type="button" data-gogoals="${m.id}">⚽ Doelpunten</button>`:""}
     ${staff?`<button class="btn" type="button" data-medit="${m.id}">Wijzig</button>`:""}${closeBtn(m)}
     ${m.closed&&isAdmin()?`<button type="button" class="btn" data-reopen="${m.id}">${delArm==="ro"+m.id?"Zeker?":"Heropenen"}</button>`:""}</div>`;
@@ -702,6 +703,8 @@ function renderAgenda(){
   const sf=$("#schedfile");if(sf)sf.onchange=()=>{const f=sf.files&&sf.files[0];if(f)sendSchedule(f);sf.value=""};on("#gokids",()=>show("team"));
   el.querySelectorAll("[data-att]").forEach(b=>b.onclick=()=>{const [mid,pid,v]=b.dataset.att.split("|");const m=matches().find(x=>x.id===mid);
     const val=v==="1";setAtt(mid,pid,m.attendance[pid]===val?null:val)});
+  el.querySelectorAll("[data-atog]").forEach(b=>b.onclick=()=>{const [mid,pid]=b.dataset.atog.split("|");const m=matches().find(x=>x.id===mid);
+    setAtt(mid,pid,m.attendance[pid]===false?null:false)});
   el.querySelectorAll("[data-meatt]").forEach(b=>b.onclick=()=>{const [mid,v]=b.dataset.meatt.split("|");setAtt(mid,"m:"+DATA.me.id,v==="1"?null:false);
     toast(v==="1"?"Je staat op aanwezig":"Je staat op afwezig")});
   el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{openAtt[b.dataset.open]=!openAtt[b.dataset.open];renderAgenda()});
