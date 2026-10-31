@@ -321,6 +321,8 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .card.borrow{border-color:var(--keeper)}
 .card.borrow p{margin:0}
 .bteam{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--line);padding-top:10px}
+.loanrow{display:flex;flex-direction:column;gap:2px;padding-block:8px;border-bottom:1px solid var(--line)}
+.loanrow:last-child{border-bottom:0}
 </style>
 
 </head>
@@ -387,7 +389,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.5.1";
+const APP_VERSION="3.6.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -445,7 +447,10 @@ const activePlayers=()=>allPlayers().filter(p=>!p.gone);
 const matches=()=>DATA?DATA.matches:[];
 const curMatch=()=>matches().find(m=>m.id===CUR)||null;
 const myKids=()=>[];
-function nameOf(id){const pl=allPlayers();const p=pl.find(x=>x.id===id);if(!p)return "?";
+const loans=()=>(DATA&&DATA.loans)||[];
+const isGuest=id=>typeof id==="string"&&id.startsWith("g:");
+function nameOf(id){if(isGuest(id)){const l=loans().find(x=>x.gid===id);return l?(l.player_name.trim().split(/\s+/)[0]+" (gast)"):"Gast"}
+  const pl=allPlayers();const p=pl.find(x=>x.id===id);if(!p)return "?";
   const parts=p.name.trim().split(/\s+/);let f=parts[0]||"?";f=f[0].toUpperCase()+f.slice(1);
   const dup=pl.some(o=>!o.gone&&o.id!==id&&(o.name.trim().split(/\s+/)[0]||"").toLowerCase()===f.toLowerCase());
   return dup&&parts.length>1?f+" "+parts[parts.length-1][0].toUpperCase()+".":f}
@@ -454,7 +459,8 @@ function pickDefault(){const t=todayStr(),ms=matches();const up=ms.filter(m=>m.m
 function ensureCur(){if(!curMatch())CUR=pickDefault();if(!VIEW)ls.set(CURKEY,CUR)}
 function buildS(){const m=curMatch();if(!m){S=null;return}
   const st=m.state||{},set=settings();
-  S={players:activePlayers().map(p=>({id:p.id,name:p.name,canKeep:p.canKeep!==false,present:m.attendance[p.id]!==false})),
+  S={players:activePlayers().map(p=>({id:p.id,name:p.name,canKeep:p.canKeep!==false,present:m.attendance[p.id]!==false}))
+      .concat(loans().filter(l=>l.dir==="in"&&l.match_id===m.id).map(l=>({id:l.gid,name:l.player_name,canKeep:false,present:m.attendance[l.gid]!==false,guest:true}))),
     pair:(set.pair||[]).slice(0,2),fieldSize:set.fieldSize||6,subMode:set.subMode||"5min",
     keeperPick:(st.keeperPick||[null,null,null,null]).slice(),plan:st.plan||null,done:(st.done||[]).slice(),
     live:Object.assign({elapsed:0,startedAt:null,stopAt:null},st.live||{}),locked:!!st.locked}}
@@ -788,7 +794,7 @@ function renderPlan(){
       <div class="note">${present.length} spelers${abs.length?` · afwezig: ${abs.map(x=>esc(nameOf(x.id))).join(", ")}`:""}</div>
       ${L?`<div class="note">🔒 De coach heeft deze indeling vastgezet.</div>`:""}</div>`;
   }
-  if(staff&&!m.closed&&present.length<=Math.min(S.fieldSize,99)){const b=BORROW[m.id];
+  if(staff&&!m.closed&&(present.length<=S.fieldSize||S.players.some(x=>x.guest))){const b=BORROW[m.id];
     h+=`<div class="card borrow"><div class="q-title">⚠️ Geen wissels</div>
       <p class="note">Je hebt ${present.length} spelers en er moeten er ${S.fieldSize} in het veld${present.length<S.fieldSize?`: je komt er ${S.fieldSize-present.length} tekort`:", dus er is niemand om te wisselen"}. Misschien kun je een speler lenen van een team dat vandaag eerder klaar is of pas later speelt.</p>
       ${!b?`<button type="button" class="btn primary" id="borrowgo">Wie kan ik lenen?</button>`:b==="loading"?`<p class="note">Zoeken…</p>`:b==="err"?`<p class="note">Kon de teams niet ophalen.</p>`:
@@ -796,7 +802,11 @@ function renderPlan(){
         b.teams.map(t=>`<div class="bteam"><div class="lockrow"><b>${esc(t.team)}</b><span class="badge sel">${t.when==="before"?"klaar ±"+esc(t.ends):"speelt pas om "+esc(t.kickoff)}</span></div>
           <div class="note">${t.when==="before"?`Speelt om ${esc(t.kickoff)}`:`Vrij tot ${esc(t.kickoff)}, kan eerst bij jullie meedoen`}${t.opponent?" · tegen "+esc(t.opponent):""} (${t.home?"thuis":"uit"})</div>
           <div class="note">${t.staff.length?t.staff.map(x=>`${x.role==="manager"?"Teamleider":"Coach"}: <b>${esc(x.name)}</b>`).join(" · "):"Nog geen coach of teamleider in de app"}</div>
-          <div class="chips">${t.players.map(n=>`<span class="chip">${esc(n.split(/\s+/)[0])}</span>`).join("")||`<span class="note">Dit team heeft nog geen spelers in de app. Vraag de coach wie er is.</span>`}</div></div>`).join("")}
+          <div class="chips">${t.players.map(pl=>{const ln=loans().find(l=>l.dir==="in"&&l.match_id===m.id&&l.lender===t.team&&l.player_id===pl.id);
+            return ln?`<button type="button" class="chip-t" aria-pressed="true" data-unloan="${ln.id}">✓ ${esc(pl.name.split(/\s+/)[0])} geleend</button>`
+              :`<button type="button" class="chip-t" data-loan="${t.team_id}|${pl.id}">+ ${esc(pl.name.split(/\s+/)[0])}</button>`}).join("")||`<span class="note">Dit team heeft nog geen spelers in de app. Vraag de coach wie er is.</span>`}</div>
+          <form class="row" data-loanform="${t.team_id}"><input class="txt" placeholder="Of typ een naam" style="flex:1;min-width:0" aria-label="Naam van de speler"><button class="btn" type="submit">+ Lenen</button></form></div>`).join("")}
+      ${b&&b.teams&&b.teams.length?`<p class="note">Tik op een naam om die speler te lenen. Hij of zij doet dan als gast mee in jullie indeling en de coach van dat team krijgt een melding.</p>`:""}
     </div>`}
   if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?(present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."):"De coach heeft voor deze wedstrijd nog geen indeling gemaakt."}</div></div>`;bindPlan(el);bindMatchBar();return}
   const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
@@ -857,10 +867,15 @@ function swapKeeper(q,newId){const p=P(),old=p.keepers[q],io=p.ids.indexOf(old),
   save();renderPlan();
   toast(`${nameOf(newId)} keept kwart ${q+1}, ${nameOf(old)} neemt de plek van ${nameOf(newId)} over`)}
 let BORROW={};
+async function doLoan(d){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"add",p_data:Object.assign({match:CUR},d)});DATA.rev=0;await poll(true);toast("Geleend. Druk op Start om de indeling te maken.")}catch(e){toast(errText(e))}}
+async function undoLoan(id){try{await rpc("app_loan",{p_token:AUTH.token,p_action:"remove",p_data:{id}});DATA.rev=0;await poll(true);toast("Lenen ongedaan gemaakt")}catch(e){toast(errText(e))}}
 async function loadBorrow(mid){BORROW[mid]="loading";renderPlan();
   try{BORROW[mid]=await rpc("app_borrow_candidates",{p_token:AUTH.token,p_match:mid})}catch(e){BORROW[mid]="err"}if(view==="plan")renderPlan()}
 function bindPlan(el){
   const bg=$("#borrowgo");if(bg)bg.onclick=()=>loadBorrow(CUR);
+  el.querySelectorAll("[data-loan]").forEach(b=>b.onclick=()=>{const [team,player]=b.dataset.loan.split("|");doLoan({team,player})});
+  el.querySelectorAll("[data-loanform]").forEach(f=>f.onsubmit=e=>{e.preventDefault();const n=f.querySelector("input").value.trim();if(!n)return;doLoan({team:f.dataset.loanform,player:"",name:n})});
+  el.querySelectorAll("[data-unloan]").forEach(b=>b.onclick=()=>undoLoan(+b.dataset.unloan));
   const ul=$("#unlock");if(ul)ul.onclick=()=>{S.locked=false;save();renderPlan();toast("Indeling losgemaakt")};
   el.querySelectorAll("[data-kq]").forEach(x=>x.onchange=()=>{S.keeperPick[+x.dataset.kq]=x.value||null;save();x.blur();renderPlan()});
   el.querySelectorAll("[data-pq]").forEach(x=>x.onclick=()=>{const pl=S.players.find(y=>y.id===x.dataset.pq);
@@ -1052,6 +1067,11 @@ function renderTeam(){
   }else{
     h+=`<h2>Spelers (${pl.length})</h2><div class="card"><div class="chips">${pl.map(p=>`<span class="chip">${esc(nameOf(p.id))}</span>`).join("")}</div></div>`;
   }
+  const L=loans();
+  if(L.length){h+=`<h2>Geleend & uitgeleend</h2><div class="card">${L.map(l=>{const sc=l.home?[l.wij,l.zij]:[l.zij,l.wij];
+      const title=l.home?`${l.borrower} – ${l.opponent||"tegenstander"}`:`${l.opponent||"tegenstander"} – ${l.borrower}`;
+      return `<div class="loanrow"><div class="lockrow"><b>${l.dir==="in"?"⬅ Geleend":"➡ Uitgeleend"}: ${esc(l.player_name.split(/\s+/)[0])}</b><span class="note">${fmtDate(l.match_date)}</span></div>
+        <div class="note">${l.dir==="in"?"van "+esc(l.lender):"aan "+esc(l.borrower)} · ${esc(title)}${l.wij+l.zij||l.closed?` · <b>${sc[0]} – ${sc[1]}</b>`:""}${l.goals?` · ⚽ ${l.goals}× gescoord`:""}</div></div>`}).join("")}</div>`}
   const {rows}=seasonStats();
   h+=`<h2>Seizoen per speler</h2><div class="gridwrap"><table class="tt"><thead><tr><th>Speler</th><th>Wedstr.</th><th>Min.</th><th>🧤 Kw.</th>${feat("goals")?"<th>⚽</th>":""}</tr></thead><tbody>
     ${rows.sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id))).map(r=>`<tr><td>${esc(nameOf(r.id))}</td><td>${r.games}</td><td>${r.min}</td><td>${r.keep}</td>${feat("goals")?`<td>${r.goals}</td>`:""}</tr>`).join("")}</tbody></table></div>`;
