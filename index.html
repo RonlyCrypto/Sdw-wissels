@@ -387,7 +387,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.5.0";
+const APP_VERSION="3.5.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -790,13 +790,13 @@ function renderPlan(){
   }
   if(staff&&!m.closed&&present.length<=Math.min(S.fieldSize,99)){const b=BORROW[m.id];
     h+=`<div class="card borrow"><div class="q-title">⚠️ Geen wissels</div>
-      <p class="note">Je hebt ${present.length} spelers en er moeten er ${S.fieldSize} in het veld${present.length<S.fieldSize?`: je komt er ${S.fieldSize-present.length} tekort`:", dus er is niemand om te wisselen"}. Misschien kun je een speler lenen van een team dat vandaag eerder klaar is.</p>
+      <p class="note">Je hebt ${present.length} spelers en er moeten er ${S.fieldSize} in het veld${present.length<S.fieldSize?`: je komt er ${S.fieldSize-present.length} tekort`:", dus er is niemand om te wisselen"}. Misschien kun je een speler lenen van een team dat vandaag eerder klaar is of pas later speelt.</p>
       ${!b?`<button type="button" class="btn primary" id="borrowgo">Wie kan ik lenen?</button>`:b==="loading"?`<p class="note">Zoeken…</p>`:b==="err"?`<p class="note">Kon de teams niet ophalen.</p>`:
-        !b.teams.length?`<p class="note">Er is vandaag geen ander team dat${b.my_kickoff?" vóór "+esc(b.my_kickoff):""} al klaar is.</p>`:
-        b.teams.map(t=>`<div class="bteam"><div class="lockrow"><b>${esc(t.team)}</b><span class="badge sel">klaar ±${esc(t.ends)}</span></div>
-          <div class="note">Speelt om ${esc(t.kickoff)}${t.opponent?" tegen "+esc(t.opponent):""} (${t.home?"thuis":"uit"})</div>
+        !b.teams.length?`<p class="note">Er is vandaag geen ander team dat eerder klaar is of pas later speelt. Alleen teams met hun wedstrijden in de app tellen mee.</p>`:
+        b.teams.map(t=>`<div class="bteam"><div class="lockrow"><b>${esc(t.team)}</b><span class="badge sel">${t.when==="before"?"klaar ±"+esc(t.ends):"speelt pas om "+esc(t.kickoff)}</span></div>
+          <div class="note">${t.when==="before"?`Speelt om ${esc(t.kickoff)}`:`Vrij tot ${esc(t.kickoff)}, kan eerst bij jullie meedoen`}${t.opponent?" · tegen "+esc(t.opponent):""} (${t.home?"thuis":"uit"})</div>
           <div class="note">${t.staff.length?t.staff.map(x=>`${x.role==="manager"?"Teamleider":"Coach"}: <b>${esc(x.name)}</b>`).join(" · "):"Nog geen coach of teamleider in de app"}</div>
-          <div class="chips">${t.players.map(n=>`<span class="chip">${esc(n.split(/\s+/)[0])}</span>`).join("")||`<span class="note">Nog geen spelers in de app</span>`}</div></div>`).join("")}
+          <div class="chips">${t.players.map(n=>`<span class="chip">${esc(n.split(/\s+/)[0])}</span>`).join("")||`<span class="note">Dit team heeft nog geen spelers in de app. Vraag de coach wie er is.</span>`}</div></div>`).join("")}
     </div>`}
   if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?(present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."):"De coach heeft voor deze wedstrijd nog geen indeling gemaakt."}</div></div>`;bindPlan(el);bindMatchBar();return}
   const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
