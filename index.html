@@ -376,7 +376,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.2.0";
+const APP_VERSION="3.2.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -814,7 +814,10 @@ function openKeeperSwap(q){const p=P();if(!p)return;const cur=p.keepers[q];
   m.hidden=false}
 function swapKeeper(q,newId){const p=P(),old=p.keepers[q],io=p.ids.indexOf(old),inew=p.ids.indexOf(newId);if(io<0||inew<0)return;
   for(let k=0;k<QU;k++){const u=q*QU+k;const t=p.grid[inew][u];p.grid[inew][u]=2;p.grid[io][u]=t===2?1:t}
-  p.keepers[q]=newId;S.keeperPick[q]=newId;save();renderPlan();
+  p.keepers[q]=newId;S.keeperPick[q]=newId;
+  if(matchMs()===0){ // wedstrijd nog niet begonnen: speeltijd opnieuw eerlijk verdelen, keepers blijven staan
+    generate("players");renderPlan();toast(`${nameOf(newId)} keept kwart ${q+1}. Speeltijd opnieuw eerlijk verdeeld.`);return}
+  save();renderPlan();
   toast(`${nameOf(newId)} keept kwart ${q+1}, ${nameOf(old)} neemt de plek van ${nameOf(newId)} over`)}
 function bindPlan(el){
   const ul=$("#unlock");if(ul)ul.onclick=()=>{S.locked=false;save();renderPlan();toast("Indeling losgemaakt")};
