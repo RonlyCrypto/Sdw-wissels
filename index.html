@@ -379,7 +379,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.3.1";
+const APP_VERSION="3.3.2";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -788,7 +788,8 @@ function renderPlan(){
   </div>`;
   for(let q=0;q<Q;q++){
     h+=`<article class="q"><div class="q-head"><div class="q-title">Kwart ${q+1}<small>${q*10}–${q*10+10} min</small></div>${staff?`<button type="button" class="kchip kbtn" data-kswap="${q}" aria-label="Keeper van kwart ${q+1} wisselen">🧤 ${esc(nameOf(p.keepers[q]))} ⇄</button>`:`<span class="kchip">🧤 ${esc(nameOf(p.keepers[q]))}</span>`}</div><div class="q-body">`;
-    for(let k=0;k<QU;k++){const u=q*QU+k,t0=u*U;
+    const noMid=QU>1&&!changesAt(q*QU+1).ins.length;   // geen wissel halverwege: één overzicht voor het hele kwart
+    for(let k=0;k<(noMid?1:QU);k++){const u=q*QU+k,t0=u*U,len=noMid?U*QU:U;
       if(u===0){h+=`<div class="blk"><div class="blk-h"><span class="t">0:00</span><b>Aftrap</b></div>`}
       else{const c=changesAt(u),d=!!S.done[u];
         const what=isBreak(u)?`${PAUSES[q-1]} · keeper wordt ${esc(nameOf(p.keepers[q]))}`:`Wissel om ${clock(t0)}`;
@@ -796,7 +797,7 @@ function renderPlan(){
           <input type="checkbox" id="dn${u}" data-done="${u}"${d?" checked":""}${staff&&(c.ins.length||isBreak(u))?"":" disabled"}>
           <span class="t">${clock(t0)}</span><span class="what"><b>${what}</b>${c.ins.length?`<span class="in">↑ ${names(c.ins)}</span><span class="out">↓ ${names(c.outs)}</span>`:`<span class="note">Geen wissel</span>`}</span>
           ${d?`<span class="tick">Gedaan</span>`:""}</label>`}
-      h+=`<div class="blk-b"><div class="lbl">Veld ${t0}–${t0+U} min</div><div class="chips">${fieldAt(u).map(id=>chip(id)).join("")}</div>
+      h+=`<div class="blk-b"><div class="lbl">Veld ${t0}–${t0+len} min</div><div class="chips">${fieldAt(u).map(id=>chip(id)).join("")}</div>
         <div class="lbl">Bank</div><div class="chips">${benchAt(u).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></div>`;
     }
     h+=`</div></article>`;
