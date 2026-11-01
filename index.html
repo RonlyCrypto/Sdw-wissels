@@ -390,7 +390,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.7.0";
+const APP_VERSION="3.7.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -905,6 +905,8 @@ function beep(freq=880,dur=.18,times=1){if(!audio)return;try{for(let i=0;i<times
   g.gain.setValueAtTime(.25,st);g.gain.exponentialRampToValueAtTime(.001,st+dur);o.start(st);o.stop(st+dur)}}catch(e){}}
 function matchMs(){const L=S.live;return Math.min(END,L.elapsed+(L.startedAt?nowMs()-L.startedAt:0))}
 function fmt(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+// eerstvolgende wisselmoment in dit kwart (zonder pauze), alleen als er echt gewisseld wordt
+function nextSubBlock(u){const qEnd=(Math.floor(u/QU)+1)*QU;for(let x=u+1;x<qEnd&&x<N;x++){if(!isBreak(x)&&changesAt(x).ins.length)return x}return null}
 function startClock(){
   try{if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();audio.resume&&audio.resume()}catch(e){}
   try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}
@@ -939,10 +941,11 @@ function renderLive(){
     const prevU=uNow;
     if(staff&&prevU>0&&!isBreak(prevU)&&changesAt(prevU).ins.length&&!S.done[prevU]){const c=changesAt(prevU);
       h+=`<div class="alert"><div class="h">Wissel van ${clock(prevU*U)} nog niet afgevinkt</div><div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div><div>${doneBtn(prevU)}</div></div>`}
-    const nx=uNow+1;
-    if(nx<N&&!isBreak(nx)){const c=changesAt(nx);
-      h+=`<div class="alert calm"><div class="h">Volgende wissel om ${clock(nx*U)} · nog <span id="lcd">${fmt(nx*UMS-ms)}</span></div>${c.ins.length?`<div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div>`:`<div>Geen wissel nodig.</div>`}</div>`}
+    const nx=nextSubBlock(uNow);
+    if(nx){const c=changesAt(nx);
+      h+=`<div class="alert calm"><div class="h">Volgende wissel om ${clock(nx*U)} · nog <span id="lcd">${fmt(nx*UMS-ms)}</span></div><div><span class="in">↑ ${names(c.ins)}</span> &nbsp; <span class="out">↓ ${names(c.outs)}</span></div></div>`}
     else if(q<Q-1)h+=`<div class="alert calm"><div class="h">Pauze om ${clock((q+1)*10)} · nog <span id="lcd">${fmt((q+1)*QMS-ms)}</span></div><div>Daarna wordt ${esc(nameOf(P().keepers[q+1]))} keeper.</div></div>`;
+    else h+=`<div class="alert calm"><div class="h">Geen wissels meer · einde om 40:00 · nog <span id="lcd">${fmt(END-ms)}</span></div></div>`;
   }
   h+=`<article class="q"><div class="q-head"><div class="q-title">${atBreak?"Na de pauze":"Nu in het veld"}</div><span class="kchip">🧤 ${esc(nameOf(keeperAt(uNow)))}</span></div><div class="q-body">
     <div class="chips">${fieldAt(uNow).map(id=>chip(id)).join("")}</div>
@@ -970,7 +973,7 @@ function tick(){
     if(view==="live"){const tl=$("#ltime");
       if(!tl||!L.startedAt||Math.floor(ms/UMS)!==prevBlk||(flashU!=null&&Date.now()>=flashUntil)){if(Date.now()>=flashUntil)flashU=null;if(!(document.activeElement&&document.activeElement.id==="msel"))renderLive()}
       else{tl.textContent=fmt(ms);const cd=$("#lcd");
-        if(cd){const u=Math.floor(ms/UMS)+1;cd.textContent=fmt(Math.min(u*UMS,(Math.floor(ms/QMS)+1)*QMS)-ms)}
+        if(cd){const nx=nextSubBlock(Math.floor(ms/UMS));cd.textContent=fmt(Math.min(nx?nx*UMS:END,(Math.floor(ms/QMS)+1)*QMS)-ms)}
         document.querySelectorAll(".clock .bar i").forEach((i,b)=>i.style.width=Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))+"%")}}
   }else lastMs=matchMs();
 }
