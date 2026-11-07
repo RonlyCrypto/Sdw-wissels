@@ -399,7 +399,7 @@ button.chip.tap:focus-visible{outline:2px solid var(--field);outline-offset:2px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.9.1";
+const APP_VERSION="3.9.2";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -833,12 +833,13 @@ function renderPlan(){
   if(!P()||P().v!==3){el.innerHTML=h+`<div class="summary"><div class="big">Nog geen indeling</div><div class="sub">${staff?(present.length<2?"Zet minstens twee spelers op aanwezig.":"Kies de keepers en druk op Start."):"De coach heeft voor deze wedstrijd nog geen indeling gemaakt."}</div></div>`;bindPlan(el);bindMatchBar();return}
   const p=P(),mins=minutes(),mx=Math.max(...mins.map(x=>x.m)),mn=Math.min(...mins.map(x=>x.m));
   let viol=0;if(S.pair[0]!==S.pair[1])for(let u=0;u<N;u++){const b=benchAt(u),k=keeperAt(u),[a,c]=S.pair;
-    if((b.includes(a)&&b.includes(c))||(k===a&&b.includes(c))||(k===c&&b.includes(a)))viol++}
+    const pe=(p.pe||0)/U,f=fieldAt(u);
+    if((b.includes(a)&&b.includes(c))||(!pe&&((k===a&&b.includes(c))||(k===c&&b.includes(a))))||(pe&&u>=N-pe&&!(f.includes(a)&&f.includes(c))))viol++}
   const subsTotal=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length).length;
   const doneCount=[...Array(N).keys()].filter(u=>u>0&&changesAt(u).ins.length&&S.done[u]).length;
   h+=`<div class="summary">
     <div class="big">${mx===mn?`Iedereen speelt ${mx} minuten`:`Iedereen speelt ${mn}–${mx} minuten`}</div>
-    <div class="sub">${p.ids.length} spelers · ${p.fs} op het veld · 4 × 10 min · ${{"5min":"wissel elke 5 min","kwart":"wissel per kwart","laatste":"wissel per kwart, laatste kwart ook halverwege"}[p.sm||"5min"]}${S.pair[0]!==S.pair[1]&&staff?` · ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} nooit samen op de bank`:""}</div>
+    <div class="sub">${p.ids.length} spelers · ${p.fs} op het veld · 4 × 10 min · ${{"5min":"wissel elke 5 min","kwart":"wissel per kwart","laatste":"wissel per kwart, laatste kwart ook halverwege"}[p.sm||"5min"]}${S.pair[0]!==S.pair[1]&&staff?` · ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} nooit samen op de bank${p.pe?`, de laatste ${p.pe} min samen in het veld`:""}`:""}</div>
     ${staff&&mx!==mn?`<div class="note">Met ${p.ids.length} spelers kan het niet precies gelijk. Met “Hussel spelers” krijgen andere kinderen de extra 5 minuten.</div>`:""}
     ${staff&&viol?`<div class="warn">Let op: in ${viol} blok(ken) lukt de regel voor ${esc(nameOf(S.pair[0]))} en ${esc(nameOf(S.pair[1]))} niet.</div>`:""}
     <div class="sub"><b>${doneCount} van ${subsTotal}</b> wissels gedaan</div>
