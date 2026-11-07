@@ -324,6 +324,11 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 .loanrow{display:flex;flex-direction:column;gap:2px;padding-block:8px;border-bottom:1px solid var(--line)}
 .loanrow:last-child{border-bottom:0}
 .chip-t.declined{color:var(--red);border-color:var(--red)}
+button.chip.tap{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.chip.tap span{opacity:.6;font-size:.85em}
+button.chip.tap:focus-visible{outline:2px solid var(--field);outline-offset:2px}
+.klist .warn{display:block;color:#b45309;font-weight:600}
+.klist button .note{text-align:right}
 </style>
 
 </head>
@@ -380,6 +385,10 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
 <div id="inst" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="instt">
   <div class="mic">📲</div><div class="q-title" id="instt">Installeer de app</div><p id="instp"></p>
   <button type="button" class="btn big primary" id="instgo2">Installeren</button><button type="button" class="linkbtn" id="instlater" style="margin:0 auto">Later</button></div></div>
+<div id="pswap" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="pswapt">
+  <div class="mic">⇄</div><div class="q-title" id="pswapt">Wisselen</div>
+  <p class="note" id="pswapn"></p>
+  <div class="klist" id="pswapl"></div><button type="button" class="linkbtn" id="pswapx" style="margin:0 auto">Annuleer</button></div></div>
 <div id="kswap" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="kswapt">
   <div class="mic">🧤</div><div class="q-title" id="kswapt">Keeper wisselen</div>
   <p class="note">Kies de nieuwe keeper. De huidige keeper neemt zijn of haar plek over (veld of bank).</p>
@@ -390,7 +399,7 @@ button.q-head.pick{flex-wrap:wrap;row-gap:6px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.7.1";
+const APP_VERSION="3.8.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -858,6 +867,33 @@ function renderPlan(){
   el.querySelectorAll("[data-done]").forEach(x=>x.onchange=()=>{setDone(+x.dataset.done,x.checked);renderPlan()});
   el.querySelectorAll("[data-kswap]").forEach(b=>b.onclick=()=>openKeeperSwap(+b.dataset.kswap));
 }
+/* ---------- wisselen op elk moment (Live) ---------- */
+function liveU(){const ms=matchMs();if(ms>=END)return N-1;return Math.min(N-1,Math.floor(ms/UMS))}
+function nextBoundary(u){for(let x=u+1;x<N;x++){if(isBreak(x)||changesAt(x).ins.length)return x}return N}
+function pairWarn(a,b,u){const [x,y]=S.pair||[];if(!x||x===y)return "";const p=P(),st=id=>{const i=p.ids.indexOf(id);return i<0?1:(id===a?p.grid[p.ids.indexOf(b)][u]:id===b?p.grid[p.ids.indexOf(a)][u]:p.grid[i][u])};
+  return st(x)===0&&st(y)===0?`<span class="warn">⚠ ${esc(nameOf(x))} en ${esc(nameOf(y))} dan samen op de bank</span>`:""}
+function openPlayerSwap(id){const p=P();if(!p||!canEdit())return;const u=liveU(),i=p.ids.indexOf(id);if(i<0)return;
+  if(p.grid[i][u]===2){toast("De keeper wissel je bij Indeling: tik daar op 🧤.");return}
+  const on=p.grid[i][u]===1,opts=p.ids.filter((x,j)=>j!==i&&p.grid[j][u]===(on?0:1));
+  $("#pswapt").textContent=on?`${nameOf(id)} eruit`:`${nameOf(id)} erin`;
+  $("#pswapn").textContent=on?"Wie komt erin?":"Voor wie? Diegene gaat naar de bank.";
+  $("#pswapl").innerHTML=opts.map(x=>`<button type="button" data-pto="${x}"><b>${esc(nameOf(x))}</b><span class="note">${on?"zit op de bank":"staat in het veld"}${pairWarn(id,x,u)}</span></button>`).join("")||`<p class="note">${on?"Er zit niemand op de bank.":"Er staat niemand in het veld om mee te wisselen."}</p>`;
+  $("#pswapl").querySelectorAll("[data-pto]").forEach(b=>b.onclick=()=>pickSwapScope(id,b.dataset.pto,on));
+  $("#pswap").hidden=false}
+function pickSwapScope(a,b,aOn){const u=liveU(),e=nextBoundary(u);
+  const out=aOn?a:b,inn=aOn?b:a;
+  $("#pswapt").textContent=`↑ ${nameOf(inn)} · ↓ ${nameOf(out)}`;
+  $("#pswapn").textContent="Hoe lang geldt deze wissel?";
+  $("#pswapl").innerHTML=`<button type="button" data-scope="next"><b>${e<N?`Tot de volgende wissel (${clock(e*U)})`:"Tot het einde"}</b><span class="note">Daarna gaat het schema gewoon verder</span></button>
+    <button type="button" data-scope="rest"><b>Rest van de wedstrijd</b><span class="note">${esc(nameOf(inn))} neemt het schema van ${esc(nameOf(out))} over en andersom</span></button>`;
+  $("#pswapl").querySelectorAll("[data-scope]").forEach(x=>x.onclick=()=>{doPlayerSwap(a,b,x.dataset.scope);$("#pswap").hidden=true})}
+function doPlayerSwap(a,b,scope){const p=P(),u=liveU(),ia=p.ids.indexOf(a),ib=p.ids.indexOf(b);if(ia<0||ib<0)return;
+  const e=scope==="rest"?N:nextBoundary(u);
+  for(let x=u;x<e;x++){const t=p.grid[ia][x];p.grid[ia][x]=p.grid[ib][x];p.grid[ib][x]=t}
+  if(scope==="rest"){const sw=k=>k===a?b:k===b?a:k;for(let q=Math.floor(u/QU)+1;q<Q;q++){p.keepers[q]=sw(p.keepers[q]);if(S.keeperPick[q])S.keeperPick[q]=sw(S.keeperPick[q])}}
+  const inn=p.grid[ia][u]>0?a:b,out=inn===a?b:a;
+  flashUntil=0;flashU=null;save();renderLive();
+  toast(`↑ ${nameOf(inn)} erin · ↓ ${nameOf(out)} eruit`+(scope==="rest"?" (rest van de wedstrijd)":""))}
 function openKeeperSwap(q){const p=P();if(!p)return;const cur=p.keepers[q];
   const m=$("#kswap");$("#kswapt").textContent=`Keeper kwart ${q+1} (${q*10}–${q*10+10} min)`;
   $("#kswapl").innerHTML=p.ids.filter(id=>id!==cur).map(id=>{const u=q*QU,st=p.grid[p.ids.indexOf(id)][u];
@@ -927,6 +963,7 @@ function renderLive(){
   const uNow=ended?N-1:atBreak?ms/UMS:Math.min(N-1,Math.floor(ms/UMS));
   const phase=ended?"Afgelopen":atBreak?PAUSES[q-1]:(ms===0?"Klaar voor de aftrap":`Kwart ${q+1}`+(running?"":" · gepauzeerd"));
   const sc=score(curMatch());
+  const canSwap=staff&&!ended,tapChip=(id,cls)=>canSwap?`<button type="button" class="chip tap ${cls}${isStar(id)?" star":""}" data-pswap="${id}">${esc(nameOf(id))} <span aria-hidden="true">⇄</span></button>`:chip(id,cls);
   let h=matchBar()+closedBar(curMatch())+`<div class="clock"><div class="phase">${phase}</div><div class="time" id="ltime">${fmt(ms)}</div>
     <div class="bar">${[0,1,2,3].map(b=>`<span><i style="width:${Math.max(0,Math.min(100,(ms-b*QMS)/QMS*100))}%"></i></span>`).join("")}</div>
     ${feat("goals")&&(curMatch().goals||[]).length?`<div class="phase">${esc(matchTitle(curMatch()))} · ${sc[0]} – ${sc[1]}</div>`:""}</div>`;
@@ -948,15 +985,17 @@ function renderLive(){
     else h+=`<div class="alert calm"><div class="h">Geen wissels meer · einde om 40:00 · nog <span id="lcd">${fmt(END-ms)}</span></div></div>`;
   }
   h+=`<article class="q"><div class="q-head"><div class="q-title">${atBreak?"Na de pauze":"Nu in het veld"}</div><span class="kchip">🧤 ${esc(nameOf(keeperAt(uNow)))}</span></div><div class="q-body">
-    <div class="chips">${fieldAt(uNow).map(id=>chip(id)).join("")}</div>
-    <div class="lbl">Bank</div><div class="chips">${benchAt(uNow).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></article>`;
+    <div class="chips">${fieldAt(uNow).map(id=>tapChip(id,"")).join("")}</div>
+    <div class="lbl">Bank</div><div class="chips">${benchAt(uNow).map(id=>tapChip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div>
+    ${canSwap?`<p class="note">Tik op een speler om hem of haar nu te wisselen.</p>`:""}</div></article>`;
   if(staff)h+=`<div class="ctrl"><button class="btn small" id="lm" type="button">−10 s</button><button class="btn small" id="lp" type="button">+10 s</button><button class="btn small danger" id="lr" type="button">${resetArm?"Tik nogmaals om te resetten":"Reset"}</button></div>
-    <p class="note">De klok stopt vanzelf na elke 10 minuten. Elke 5 minuten piept je telefoon voor de wissel (geluid aan). Met −10 s en +10 s zet je de klok gelijk met de scheidsrechter.</p>`;
+    <p class="note">De klok stopt vanzelf na elke 10 minuten. Bij elke geplande wissel piept je telefoon (geluid aan). Met −10 s en +10 s zet je de klok gelijk met de scheidsrechter.</p>`;
   else if(!curMatch().closed)h+=`<p class="note">Je kijkt mee. De coach bedient de klok, deze pagina loopt vanzelf mee.</p>`;
   if(ended)h+=closeBtn(curMatch());
   el.innerHTML=h;bindMatchBar();bindClose(el);
   const b=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   b("#lstart",startClock);b("#lpause",pauseClock);b("#lm",()=>adjust(-10000));b("#lp",()=>adjust(10000));b("#lgoal",()=>show("goals"));
+  el.querySelectorAll("[data-pswap]").forEach(x=>x.onclick=()=>openPlayerSwap(x.dataset.pswap));
   el.querySelectorAll("[data-ldone]").forEach(x=>x.onclick=()=>{setDone(+x.dataset.ldone,true);flashUntil=0;flashU=null;renderLive();toast("Afgevinkt")});
   b("#lr",()=>{if(resetArm){resetArm=false;resetClock()}else{resetArm=true;renderLive();setTimeout(()=>{if(resetArm){resetArm=false;if(view==="live")renderLive()}},3000)}});
 }
@@ -1324,7 +1363,7 @@ if(AUTH)setTimeout(()=>pushCheck().then(()=>{if(view==="team")renderTeam();if(DA
   const ready=()=>!AUTH||(DATA!==null);
   const iv=setInterval(()=>{if((Date.now()-t0>minT&&ready())||Date.now()-t0>5500){clearInterval(iv);hide()}},100);
   sp.onclick=()=>{clearInterval(iv);hide()}})();
-$("#ver").textContent="v"+APP_VERSION;$("#kswapx").onclick=()=>{$("#kswap").hidden=true};$("#kswap").onclick=e=>{if(e.target.id==="kswap")$("#kswap").hidden=true};$("#instgo2").onclick=doInstall;$("#instlater").onclick=()=>{$("#inst").hidden=true};renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
+$("#ver").textContent="v"+APP_VERSION;$("#kswapx").onclick=()=>{$("#kswap").hidden=true};$("#pswapx").onclick=()=>{$("#pswap").hidden=true};$("#pswap").onclick=e=>{if(e.target.id==="pswap")$("#pswap").hidden=true};$("#kswap").onclick=e=>{if(e.target.id==="kswap")$("#kswap").hidden=true};$("#instgo2").onclick=doInstall;$("#instlater").onclick=()=>{$("#inst").hidden=true};renderInstall();$("#viewback").onclick=exitView;$("#updgo").onclick=doUpdate;$("#updlater").onclick=()=>{$("#upd").hidden=true};
 checkVersion();setInterval(checkVersion,60000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 
