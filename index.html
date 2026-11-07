@@ -399,7 +399,7 @@ button.chip.tap:focus-visible{outline:2px solid var(--field);outline-offset:2px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.9.0";
+const APP_VERSION="3.9.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -525,7 +525,7 @@ function evalCost(on,n,pa,pb,kIdx,pe){
   const avg=tot/n;for(let p=0;p<n;p++)c+=100*(m[p]-avg)**2;
   if(pa>=0&&pb>=0)for(let u=0;u<N;u++){const k=kIdx[Math.floor(u/QU)];
     if(!on[pa*N+u]&&!on[pb*N+u])c+=1000;
-    if(k===pa&&on[pb*N+u]!==1)c+=1000; if(k===pb&&on[pa*N+u]!==1)c+=1000;
+    if(!pe){if(k===pa&&on[pb*N+u]!==1)c+=1000; if(k===pb&&on[pa*N+u]!==1)c+=1000}
     if(on[pa*N+u]&&on[pb*N+u])c+=(N-1-u)*15}  // samen erin: liefst aan het eind
   for(let u=1;u<N;u++)for(let p=0;p<n;p++)if((on[p*N+u]>0)!==(on[p*N+u-1]>0))c+=3;
   for(let p=0;p<n;p++){let run=0;for(let u=0;u<=N;u++){if(u<N&&!on[p*N+u]){run++;continue}if(run>1)c+=(run-1)*25;run=0}}
