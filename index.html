@@ -399,7 +399,7 @@ button.chip.tap:focus-visible{outline:2px solid var(--field);outline-offset:2px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.8.1";
+const APP_VERSION="3.8.2";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -779,6 +779,7 @@ function bindMatchBar(){const s=$("#msel");if(s)s.onchange=()=>{selectMatch(s.va
 function noMatch(el){el.innerHTML=`<div class="summary"><div class="big">Nog geen wedstrijd</div><div class="sub">${isStaff()?"Voeg eerst een wedstrijd toe bij Agenda.":"De teammanager heeft nog geen wedstrijden ingevuld."}</div></div>`}
 
 /* ---------- indeling ---------- */
+const bChip=(id,cls,u)=>canEdit()?`<button type="button" class="chip tap ${cls}${isStar(id)?" star":""}" data-bswap="${id}" data-bu="${u}">${esc(nameOf(id))} <span aria-hidden="true">⇄</span></button>`:chip(id,cls);
 function renderPlan(){
   const el=$("#v-plan");if(!S){noMatch(el);return}
   const staff=canEdit(),m=curMatch();
@@ -852,8 +853,8 @@ function renderPlan(){
           <input type="checkbox" id="dn${u}" data-done="${u}"${d?" checked":""}${staff&&(c.ins.length||isBreak(u))?"":" disabled"}>
           <span class="t">${clock(t0)}</span><span class="what"><b>${what}</b>${c.ins.length?`<span class="in">↑ ${names(c.ins)}</span><span class="out">↓ ${names(c.outs)}</span>`:`<span class="note">Geen wissel</span>`}</span>
           ${d?`<span class="tick">Gedaan</span>`:""}</label>`}
-      h+=`<div class="blk-b"><div class="lbl">Veld ${t0}–${t0+len} min</div><div class="chips">${fieldAt(u).map(id=>chip(id)).join("")}</div>
-        <div class="lbl">Bank</div><div class="chips">${benchAt(u).map(id=>chip(id,"bench")).join("")||`<span class="note">Niemand</span>`}</div></div></div>`;
+      h+=`<div class="blk-b"><div class="lbl">Veld ${t0}–${t0+len} min</div><div class="chips">${fieldAt(u).map(id=>bChip(id,"",u)).join("")}</div>
+        <div class="lbl">Bank</div><div class="chips">${benchAt(u).map(id=>bChip(id,"bench",u)).join("")||`<span class="note">Niemand</span>`}</div></div></div>`;
     }
     h+=`</div></article>`;
   }
@@ -869,33 +870,34 @@ function renderPlan(){
   on("#undone",()=>{S.done=[];save();renderPlan()});
   el.querySelectorAll("[data-done]").forEach(x=>x.onchange=()=>{setDone(+x.dataset.done,x.checked);renderPlan()});
   el.querySelectorAll("[data-kswap]").forEach(b=>b.onclick=()=>openKeeperSwap(+b.dataset.kswap));
+  el.querySelectorAll("[data-bswap]").forEach(b=>b.onclick=()=>openPlayerSwap(b.dataset.bswap,+b.dataset.bu));
 }
 /* ---------- wisselen op elk moment (Live) ---------- */
 function liveU(){const ms=matchMs();if(ms>=END)return N-1;return Math.min(N-1,Math.floor(ms/UMS))}
 function nextBoundary(u){for(let x=u+1;x<N;x++){if(isBreak(x)||changesAt(x).ins.length)return x}return N}
 function pairWarn(a,b,u){const [x,y]=S.pair||[];if(!x||x===y)return "";const p=P(),st=id=>{const i=p.ids.indexOf(id);return i<0?1:(id===a?p.grid[p.ids.indexOf(b)][u]:id===b?p.grid[p.ids.indexOf(a)][u]:p.grid[i][u])};
   return st(x)===0&&st(y)===0?`<span class="warn">⚠ ${esc(nameOf(x))} en ${esc(nameOf(y))} dan samen op de bank</span>`:""}
-function openPlayerSwap(id){const p=P();if(!p||!canEdit())return;const u=liveU(),i=p.ids.indexOf(id);if(i<0)return;
+function openPlayerSwap(id,u){const p=P();if(!p||!canEdit())return;if(u==null)u=liveU();const i=p.ids.indexOf(id);if(i<0)return;
   if(p.grid[i][u]===2){toast("De keeper wissel je bij Indeling: tik daar op 🧤.");return}
   const on=p.grid[i][u]===1,opts=p.ids.filter((x,j)=>j!==i&&p.grid[j][u]===(on?0:1));
   $("#pswapt").textContent=on?`${nameOf(id)} eruit`:`${nameOf(id)} erin`;
   $("#pswapn").textContent=on?"Wie komt erin?":"Voor wie? Diegene gaat naar de bank.";
   $("#pswapl").innerHTML=opts.map(x=>`<button type="button" data-pto="${x}"><b>${esc(nameOf(x))}</b><span class="note">${on?"zit op de bank":"staat in het veld"}${pairWarn(id,x,u)}</span></button>`).join("")||`<p class="note">${on?"Er zit niemand op de bank.":"Er staat niemand in het veld om mee te wisselen."}</p>`;
-  $("#pswapl").querySelectorAll("[data-pto]").forEach(b=>b.onclick=()=>pickSwapScope(id,b.dataset.pto,on));
+  $("#pswapl").querySelectorAll("[data-pto]").forEach(b=>b.onclick=()=>pickSwapScope(id,b.dataset.pto,on,u));
   $("#pswap").hidden=false}
-function pickSwapScope(a,b,aOn){const u=liveU(),e=nextBoundary(u);
+function pickSwapScope(a,b,aOn,u){const e=nextBoundary(u),inPlan=view==="plan";
   const out=aOn?a:b,inn=aOn?b:a;
   $("#pswapt").textContent=`↑ ${nameOf(inn)} · ↓ ${nameOf(out)}`;
   $("#pswapn").textContent="Hoe lang geldt deze wissel?";
-  $("#pswapl").innerHTML=`<button type="button" data-scope="next"><b>${e<N?`Tot de volgende wissel (${clock(e*U)})`:"Tot het einde"}</b><span class="note">Daarna gaat het schema gewoon verder</span></button>
-    <button type="button" data-scope="rest"><b>Rest van de wedstrijd</b><span class="note">${esc(nameOf(inn))} neemt het schema van ${esc(nameOf(out))} over en andersom</span></button>`;
-  $("#pswapl").querySelectorAll("[data-scope]").forEach(x=>x.onclick=()=>{doPlayerSwap(a,b,x.dataset.scope);$("#pswap").hidden=true})}
-function doPlayerSwap(a,b,scope){const p=P(),u=liveU(),ia=p.ids.indexOf(a),ib=p.ids.indexOf(b);if(ia<0||ib<0)return;
+  $("#pswapl").innerHTML=`<button type="button" data-scope="next"><b>${inPlan?`Alleen ${clock(u*U)}–${clock(e*U)}`:e<N?`Tot de volgende wissel (${clock(e*U)})`:"Tot het einde"}</b><span class="note">Daarna gaat het schema gewoon verder</span></button>
+    <button type="button" data-scope="rest"><b>${inPlan&&u>0?`Vanaf ${clock(u*U)} de rest van de wedstrijd`:inPlan?"De hele wedstrijd":"Rest van de wedstrijd"}</b><span class="note">${esc(nameOf(inn))} neemt het schema van ${esc(nameOf(out))} over en andersom</span></button>`;
+  $("#pswapl").querySelectorAll("[data-scope]").forEach(x=>x.onclick=()=>{doPlayerSwap(a,b,x.dataset.scope,u);$("#pswap").hidden=true})}
+function doPlayerSwap(a,b,scope,u){const p=P(),ia=p.ids.indexOf(a),ib=p.ids.indexOf(b);if(ia<0||ib<0)return;
   const e=scope==="rest"?N:nextBoundary(u);
   for(let x=u;x<e;x++){const t=p.grid[ia][x];p.grid[ia][x]=p.grid[ib][x];p.grid[ib][x]=t}
   if(scope==="rest"){const sw=k=>k===a?b:k===b?a:k;for(let q=Math.floor(u/QU)+1;q<Q;q++){p.keepers[q]=sw(p.keepers[q]);if(S.keeperPick[q])S.keeperPick[q]=sw(S.keeperPick[q])}}
   const inn=p.grid[ia][u]>0?a:b,out=inn===a?b:a;
-  flashUntil=0;flashU=null;save();renderLive();
+  if(view==="plan"){save();renderPlan()}else{flashUntil=0;flashU=null;save();renderLive()}
   toast(`↑ ${nameOf(inn)} erin · ↓ ${nameOf(out)} eruit`+(scope==="rest"?" (rest van de wedstrijd)":""))}
 function openKeeperSwap(q){const p=P();if(!p)return;const cur=p.keepers[q];
   const m=$("#kswap");$("#kswapt").textContent=`Keeper kwart ${q+1} (${q*10}–${q*10+10} min)`;
