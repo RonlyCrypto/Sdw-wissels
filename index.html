@@ -329,6 +329,25 @@ button.chip.tap span{opacity:.6;font-size:.85em}
 button.chip.tap:focus-visible{outline:2px solid var(--field);outline-offset:2px}
 .klist .warn{display:block;color:#b45309;font-weight:600}
 .klist button .note{text-align:right}
+.h2row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.h2row h2{margin-bottom:0}
+.btn.small{padding:6px 12px;font-size:14px}
+.gedcard{display:flex;flex-direction:column;gap:10px}
+.gedcard .gridwrap{border:0;padding:0}
+table.g.ged td.c button{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+table.g.ged td.c{height:34px}
+table.g.ged td.c i{height:28px;border-radius:5px}
+table.g.ged td.c button:focus-visible i{outline:2px solid var(--ink);outline-offset:1px}
+table.g.ged td.cnt{text-align:center;font:700 13px var(--display);color:var(--muted);padding-top:6px}
+table.g.ged td.cnt.bad{color:#e5484d}
+table.g.ged td.cnt.bl{border-left:2px solid var(--muted)}
+table.g.ged td.m.hi{color:var(--field)}
+table.g.ged td.m.lo{color:#e5484d}
+.gedsum{font:800 22px var(--display);text-transform:uppercase}
+.gedsum.ok{color:var(--field)}
+.gerr{margin:0;color:#e5484d;font-weight:600}
+.gwarn{margin:0;color:#d97706;font-weight:600}
+#gedsave:disabled{opacity:.4;cursor:not-allowed}
 </style>
 
 </head>
@@ -399,7 +418,7 @@ button.chip.tap:focus-visible{outline:2px solid var(--field);outline-offset:2px}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.9.2";
+const APP_VERSION="3.10.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -863,20 +882,61 @@ function renderPlan(){
     }
     h+=`</div></article>`;
   }
-  h+=`<h2>Speeltijd per blok van 5 minuten</h2><div class="gridwrap"><table class="g"><thead><tr><th></th>${Array.from({length:N},(_,u)=>`<th>${u*U}</th>`).join("")}<th style="text-align:right">min</th></tr></thead><tbody>`;
+  if(GED&&staff){h+=`<div id="gedwrap">${gridEditHtml()}</div>`}else{
+  h+=`<div class="h2row"><h2>Speeltijd per blok van 5 minuten</h2>${staff?`<button type="button" class="btn small" id="gedopen">✏️ Bewerk</button>`:""}</div><div class="gridwrap"><table class="g"><thead><tr><th></th>${Array.from({length:N},(_,u)=>`<th>${u*U}</th>`).join("")}<th style="text-align:right">min</th></tr></thead><tbody>`;
   p.ids.forEach((id,i)=>{h+=`<tr><td class="n">${esc(nameOf(id))}${isStar(id)&&staff?" ★":""}</td>${p.grid[i].map((v,u)=>`<td class="c ${v===2?"k":v?"f":""}${isBreak(u)?" bl":""}"><i></i></td>`).join("")}<td class="m">${mins[i].m}</td></tr>`});
-  h+=`</tbody></table><div class="legend"><span style="--c:var(--field)">Veld</span><span style="--c:var(--keeper)">Keeper</span><span style="--c:var(--bench)">Bank</span></div></div>`;
-  el.innerHTML=h;bindPlan(el);bindMatchBar();bindClose(el);
+  h+=`</tbody></table><div class="legend"><span style="--c:var(--field)">Veld</span><span style="--c:var(--keeper)">Keeper</span><span style="--c:var(--bench)">Bank</span></div></div>`;}
+  el.innerHTML=h;bindPlan(el);if(GED&&staff)bindGridEdit();bindMatchBar();bindClose(el);
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
   on("#hplayers",()=>{generate("players");renderPlan();toast("Spelers gehusseld, keepers hetzelfde")});
   on("#hkeepers",()=>{if(S.keeperPick.every(Boolean)){toast("Zet een kwart op Automatisch om keepers te husselen");return}generate("keepers");renderPlan();toast("Keepers gehusseld")});
   on("#lock",()=>{S.locked=true;save();renderPlan();toast("Indeling vastgezet");window.scrollTo(0,0)});
   on("#copy",copyPlan);
+  on("#gedopen",()=>{if(S.locked){toast("Haal eerst het slot eraf om te bewerken");return}const p=P();GED={grid:p.grid.map(r=>r.slice()),keepers:p.keepers.slice(),tool:"swap"};renderPlan();const w=$("#gedwrap");if(w)w.scrollIntoView({block:"start",behavior:"smooth"})});
   on("#undone",()=>{S.done=[];save();renderPlan()});
   el.querySelectorAll("[data-done]").forEach(x=>x.onchange=()=>{setDone(+x.dataset.done,x.checked);renderPlan()});
   el.querySelectorAll("[data-kswap]").forEach(b=>b.onclick=()=>openKeeperSwap(+b.dataset.kswap));
   el.querySelectorAll("[data-bswap]").forEach(b=>b.onclick=()=>openPlayerSwap(b.dataset.bswap,+b.dataset.bu));
 }
+/* ---------- blokken handmatig bewerken ---------- */
+let GED=null;
+function gridEditCheck(){const p=P(),g=GED.grid,n=p.ids.length,fs=p.fs,iss=[];
+  const cnt=Array.from({length:N},(_,u)=>g.reduce((a,r)=>a+(r[u]>0?1:0),0));
+  const badC=cnt.map((c,u)=>c!==fs?u:-1).filter(u=>u>=0);
+  if(badC.length)iss.push({hard:1,t:`Op ${badC.map(u=>clock(u*U)).join(", ")} staan er niet ${fs} spelers in het veld.`});
+  const [a,c]=S.pair||[];const ia=p.ids.indexOf(a),ic=p.ids.indexOf(c);
+  if(a&&a!==c&&ia>=0&&ic>=0){const pe=(S.pairEnd||0)/U;
+    const both=[...Array(N).keys()].filter(u=>g[ia][u]===0&&g[ic][u]===0);
+    if(both.length)iss.push({t:`${nameOf(a)} en ${nameOf(c)} zitten samen op de bank op ${both.map(u=>clock(u*U)).join(", ")}.`});
+    if(pe){const miss=[...Array(N).keys()].filter(u=>u>=N-pe&&!(g[ia][u]===1&&g[ic][u]===1));if(miss.length)iss.push({t:`${nameOf(a)} en ${nameOf(c)} staan de laatste ${S.pairEnd} minuten niet allebei in het veld.`})}}
+  const mins=g.map(r=>r.filter(v=>v>0).length*U);
+  return {cnt,iss,mins,ok:!iss.some(x=>x.hard)}}
+function gridEditHtml(){const p=P(),g=GED.grid,ck=gridEditCheck(),mx=Math.max(...ck.mins),mn=Math.min(...ck.mins);
+  const fq={};ck.mins.forEach(m=>fq[m]=(fq[m]||0)+1);const mode=+Object.keys(fq).sort((x,y)=>fq[y]-fq[x]||y-x)[0];
+  let h=`<div class="h2row"><h2>Blokken bewerken</h2></div>
+  <div class="card gedcard"><div class="seg" role="group" aria-label="Wat doet een tik">
+    <button type="button" data-gtool="swap" aria-pressed="${GED.tool==="swap"}">Veld ⇄ Bank</button><button type="button" data-gtool="keep" aria-pressed="${GED.tool==="keep"}">🧤 Keeper maken</button></div>
+  <p class="note">${GED.tool==="swap"?"Tik op een blok om iemand van het veld naar de bank te zetten of andersom.":"Tik op een blok om die speler het hele kwart keeper te maken. De oude keeper gaat dan het veld in."}</p>
+  <div class="gedsum ${mx===mn?"ok":""}">${mx===mn?`Iedereen speelt ${mx} minuten`:`Speeltijd ${mn}–${mx} minuten`}</div>
+  <div class="gridwrap"><table class="g ged"><thead><tr><th></th>${Array.from({length:N},(_,u)=>`<th>${u*U}</th>`).join("")}<th style="text-align:right">min</th></tr></thead><tbody>`;
+  p.ids.forEach((id,i)=>{const m=ck.mins[i];h+=`<tr><td class="n">${esc(nameOf(id))}${isStar(id)?" ★":""}</td>${g[i].map((v,u)=>`<td class="c ${v===2?"k":v?"f":""}${isBreak(u)?" bl":""}"><button type="button" data-gc="${i},${u}" aria-label="${esc(nameOf(id))} ${clock(u*U)}: ${v===2?"keeper":v?"veld":"bank"}"><i></i></button></td>`).join("")}<td class="m${m>mode?" hi":m<mode?" lo":""}">${m}</td></tr>`});
+  h+=`</tbody><tfoot><tr><td class="n">Op het veld</td>${ck.cnt.map((c,u)=>`<td class="cnt${c!==p.fs?" bad":""}${isBreak(u)?" bl":""}">${c}</td>`).join("")}<td class="m">/${p.fs}</td></tr></tfoot></table></div>
+  ${ck.iss.map(x=>`<p class="${x.hard?"gerr":"gwarn"}">${x.hard?"✗":"⚠"} ${esc(x.t)}</p>`).join("")}
+  <div class="row"><button type="button" class="btn primary" id="gedsave"${ck.ok?"":" disabled"}>✓ Opslaan</button><button type="button" class="btn" id="gedcancel">Annuleer</button></div>
+  ${ck.ok?"":`<p class="note">Opslaan kan pas als er in elk blok ${p.fs} spelers in het veld staan.</p>`}</div>`;
+  return h}
+function bindGridEdit(){const w=$("#gedwrap");if(!w)return;
+  w.querySelectorAll("[data-gtool]").forEach(b=>b.onclick=()=>{GED.tool=b.dataset.gtool;redrawGridEdit()});
+  w.querySelectorAll("[data-gc]").forEach(b=>b.onclick=()=>{const [i,u]=b.dataset.gc.split(",").map(Number),g=GED.grid,q=Math.floor(u/QU);
+    if(GED.tool==="keep"){if(g[i][u]===2)return;for(let k=0;k<QU;k++){const x=q*QU+k;g.forEach(r=>{if(r[x]===2)r[x]=1});g[i][x]=2}GED.keepers[q]=P().ids[i]}
+    else{if(g[i][u]===2){toast("Dit is de keeper. Kies eerst een andere keeper met 🧤 Keeper maken.");return}g[i][u]=g[i][u]?0:1}
+    redrawGridEdit()});
+  const c=$("#gedcancel");if(c)c.onclick=()=>{GED=null;renderPlan()};
+  const sv=$("#gedsave");if(sv)sv.onclick=()=>{if(!gridEditCheck().ok)return;const p=P();p.grid=GED.grid;p.keepers=GED.keepers.slice();
+    for(let q=0;q<Q;q++)if(S.keeperPick[q]&&S.keeperPick[q]!==p.keepers[q])S.keeperPick[q]=p.keepers[q];
+    GED=null;save();renderPlan();toast("Indeling opgeslagen")}}
+function redrawGridEdit(){const w=$("#gedwrap");if(!w){renderPlan();return}const sx=(w.querySelector(".gridwrap")||{}).scrollLeft||0;w.innerHTML=gridEditHtml();const gw=w.querySelector(".gridwrap");if(gw)gw.scrollLeft=sx;bindGridEdit()}
+
 /* ---------- wisselen op elk moment (Live) ---------- */
 function liveU(){const ms=matchMs();if(ms>=END)return N-1;return Math.min(N-1,Math.floor(ms/UMS))}
 function nextBoundary(u){for(let x=u+1;x<N;x++){if(isBreak(x)||changesAt(x).ins.length)return x}return N}
