@@ -418,7 +418,7 @@ table.g.ged td.m.lo{color:#e5484d}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.10.0";
+const APP_VERSION="3.10.1";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -601,9 +601,14 @@ function generate(mode){
   const ok=S.pair[0]!==S.pair[1];
   const on=solve(n,kIdx,F,ok?ids.indexOf(S.pair[0]):-1,ok?ids.indexOf(S.pair[1]):-1,S.subMode,pairOn?peQ*QU:0);
   const grid=ids.map((_,p)=>Array.from({length:N},(_,u)=>on[p*N+u]));
-  S.plan={ids,keepers,grid,fs,v:3,sm:S.subMode,pe:S.pairEnd||0};S.done=[];
+  const ms0=matchMs(),u0=Math.min(N,Math.ceil(ms0/UMS));
+  // al gespeelde blokken blijven zoals ze waren
+  if(ms0>0&&old&&old.ids.length===ids.length&&old.ids.every((x,i)=>x===ids[i])){for(let i=0;i<ids.length;i++)for(let u=0;u<u0;u++)grid[i][u]=old.grid[i][u];
+    for(let q=0;q<Math.ceil(u0/QU);q++){const ok_=old.keepers[q],nk=keepers[q];if(ok_===nk)continue;const io=ids.indexOf(ok_),inw=ids.indexOf(nk);
+      for(let u=Math.max(u0,q*QU);u<(q+1)*QU;u++){const t=grid[io][u];grid[io][u]=grid[inw][u];grid[inw][u]=t}keepers[q]=ok_}}
+  S.plan={ids,keepers,grid,fs,v:3,sm:S.subMode,pe:S.pairEnd||0};S.done=ms0>0?S.done.map((d,u)=>u<=u0?d:null):[];
   if(peQ){const bad=keepers.slice(Q-peQ).filter(k=>S.pair.includes(k));if(bad.length)setTimeout(()=>toast(`Let op: ${nameOf(bad[0])} keept aan het einde, dan staan ${nameOf(S.pair[0])} en ${nameOf(S.pair[1])} niet samen in het veld.`),50)}
-  if(!S.live.startedAt)S.live={elapsed:0,startedAt:null,stopAt:null};
+  
   save();
 }
 function planValid(){
