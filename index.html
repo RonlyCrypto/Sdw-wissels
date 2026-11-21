@@ -404,6 +404,9 @@ table.g.ged td.m.lo{color:#e5484d}
 <div id="inst" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="instt">
   <div class="mic">📲</div><div class="q-title" id="instt">Installeer de app</div><p id="instp"></p>
   <button type="button" class="btn big primary" id="instgo2">Installeren</button><button type="button" class="linkbtn" id="instlater" style="margin:0 auto">Later</button></div></div>
+<div id="cfm" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="cfmt">
+  <div class="mic">?</div><div class="q-title" id="cfmt"></div><p class="note" id="cfmn"></p>
+  <button type="button" class="btn big primary" id="cfmy"></button><button type="button" class="btn" id="cfmno"></button></div></div>
 <div id="pswap" class="modal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="pswapt">
   <div class="mic">⇄</div><div class="q-title" id="pswapt">Wisselen</div>
   <p class="note" id="pswapn"></p>
@@ -418,7 +421,7 @@ table.g.ged td.m.lo{color:#e5484d}
   <button type="button" class="btn big primary" id="updgo">↻ Vernieuwen</button><button type="button" class="linkbtn" id="updlater" style="margin:0 auto">Later</button></div></div>
 
 <script>
-const APP_VERSION="3.10.1";
+const APP_VERSION="3.11.0";
 const SB_URL="https://xvbxblezdewayrkidvrv.supabase.co", SB_KEY="sb_publishable_CqCiRFKwnTboZFvn4Aqoaw_b6nBgzgu";
 const NEW_HOME="https://sdw-wissels.vercel.app/";
 const PAGE_URL=location.hostname.endsWith("vercel.app")?location.origin+"/":NEW_HOME;
@@ -492,7 +495,7 @@ function buildS(){const m=curMatch();if(!m){S=null;return}
       .concat(loans().filter(l=>l.dir==="in"&&l.match_id===m.id&&l.status==="approved").map(l=>({id:l.gid,name:l.player_name,canKeep:false,present:m.attendance[l.gid]!==false,guest:true}))),
     pair:(set.pair||[]).slice(0,2),fieldSize:set.fieldSize||6,subMode:set.subMode||"5min",pairEnd:+set.pairEnd||0,
     keeperPick:(st.keeperPick||[null,null,null,null]).slice(),plan:st.plan||null,done:(st.done||[]).slice(),
-    live:Object.assign({elapsed:0,startedAt:null,stopAt:null},st.live||{}),locked:!!st.locked}}
+    live:Object.assign({elapsed:0,startedAt:null,stopAt:null},st.live||{}),locked:!!st.locked,prev:st.prev||null}}
 function matchTitle(m){const me=DATA.team.name,op=m.opponent||"tegenstander";return m.home?`${me} – ${op}`:`${op} – ${me}`}
 function score(m){const g=m.goals||[];const w=g.filter(x=>x.side==="wij").length,z=g.filter(x=>x.side==="zij").length;return m.home?[w,z]:[z,w]}
 function played(m){const t=todayStr();if(m.match_date<t)return true;const l=m.state&&m.state.live;return m.match_date===t&&((l&&l.elapsed>=END)||(m.goals||[]).length>0)}
@@ -500,7 +503,7 @@ function played(m){const t=todayStr();if(m.match_date<t)return true;const l=m.st
 /* planner state -> server */
 let pending=null,pushT=null,pushing=false;
 function save(){if(!canEdit()||!S)return;const m=curMatch();if(!m)return;localSeq++;
-  m.state={keeperPick:S.keeperPick,plan:S.plan,done:S.done,live:S.live,locked:S.locked};
+  m.state={keeperPick:S.keeperPick,plan:S.plan,done:S.done,live:S.live,locked:S.locked,prev:S.prev||null};
   pending={id:m.id,state:m.state};clearTimeout(pushT);pushT=setTimeout(pushState,250)}
 async function pushState(){if(!pending)return;if(pushing){pushT=setTimeout(pushState,250);return}
   const p=pending;pending=null;pushing=true;
@@ -578,8 +581,18 @@ function solve(n,kIdx,F,pa,pb,sm,pe){pe=pe||0;
 }
 // hoe vaak elke speler eerder dit seizoen keeper was (gespeelde wedstrijden, behalve de huidige)
 function keeperHistory(){const h={};matches().forEach(m=>{if(m.id===CUR||!played(m))return;const p=m.state&&m.state.plan;if(!p||!p.keepers)return;p.keepers.forEach(k=>{if(k)h[k]=(h[k]||0)+1})});return h}
-function generate(mode){
-  mode=mode||"all";
+function snapPrev(){if(S&&S.plan&&S.plan.v===3)S.prev={plan:JSON.parse(JSON.stringify(S.plan)),keeperPick:S.keeperPick.slice(),done:(S.done||[]).slice()}}
+function undoPlan(){if(!S.prev||!S.prev.plan)return;const cur={plan:S.plan,keeperPick:S.keeperPick,done:S.done};
+  S.plan=S.prev.plan;S.keeperPick=(S.prev.keeperPick||[null,null,null,null]).slice();S.done=(S.prev.done||[]).slice();S.prev=cur;GED=null;
+  save();renderPlan();toast("Vorige indeling staat terug. Nog een keer tikken zet de andere weer terug.")}
+// vraag eerst als de indeling met de hand is aangepast
+function guardManual(fn){if(!(P()&&P().manual)){fn();return}
+  askConfirm("Indeling opnieuw berekenen?","Je hebt deze indeling zelf aangepast. Als de app opnieuw rekent, zijn die aanpassingen weg. Met ↶ Vorige indeling terug haal je ze daarna nog terug.","Ja, opnieuw berekenen",fn,"Nee, laat staan",null)}
+function askConfirm(title,text,yes,onYes,no,onNo){const m=$("#cfm");$("#cfmt").textContent=title;$("#cfmn").textContent=text;
+  const y=$("#cfmy"),n=$("#cfmno");y.textContent=yes;n.textContent=no;
+  y.onclick=()=>{m.hidden=true;onYes&&onYes()};n.onclick=()=>{m.hidden=true;onNo&&onNo()};m.hidden=false;y.focus()}
+function generate(mode,noSnap){
+  mode=mode||"all";if(!noSnap)snapPrev();
   const old=S.plan&&S.plan.v===3?S.plan:null;
   const present=S.players.filter(p=>p.present);
   if(present.length<2){S.plan=null;save();return}
@@ -869,6 +882,7 @@ function renderPlan(){
     <div class="sub"><b>${doneCount} van ${subsTotal}</b> wissels gedaan</div>
     ${staff&&!L?`<div class="row"><button class="btn" id="hplayers" type="button">↻ Hussel spelers</button><button class="btn" id="hkeepers" type="button">🧤 Hussel keepers</button><button class="btn primary" id="lock" type="button">🔒 Vastzetten</button></div>
     <div class="note">Hussel spelers: zelfde keepers, nieuwe wissels. Hussel keepers: nieuwe keepers voor de kwarten op Automatisch.</div>`:""}
+    ${staff&&!L&&S.prev&&S.prev.plan?`<button class="btn" id="undoplan" type="button">↶ Vorige indeling terug</button>`:""}
     <div class="row"><button class="btn" id="copy" type="button">Kopieer voor WhatsApp</button>${staff&&doneCount?`<button class="btn" id="undone" type="button">Vinkjes wissen</button>`:""}</div>
   </div>`;
   for(let q=0;q<Q;q++){
@@ -893,8 +907,9 @@ function renderPlan(){
   h+=`</tbody></table><div class="legend"><span style="--c:var(--field)">Veld</span><span style="--c:var(--keeper)">Keeper</span><span style="--c:var(--bench)">Bank</span></div></div>`;}
   el.innerHTML=h;bindPlan(el);if(GED&&staff)bindGridEdit();bindMatchBar();bindClose(el);
   const on=(id,f)=>{const x=$(id);if(x)x.onclick=f};
-  on("#hplayers",()=>{generate("players");renderPlan();toast("Spelers gehusseld, keepers hetzelfde")});
-  on("#hkeepers",()=>{if(S.keeperPick.every(Boolean)){toast("Zet een kwart op Automatisch om keepers te husselen");return}generate("keepers");renderPlan();toast("Keepers gehusseld")});
+  on("#hplayers",()=>guardManual(()=>{generate("players");renderPlan();toast("Spelers gehusseld, keepers hetzelfde")}));
+  on("#hkeepers",()=>{if(S.keeperPick.every(Boolean)){toast("Zet een kwart op Automatisch om keepers te husselen");return}guardManual(()=>{generate("keepers");renderPlan();toast("Keepers gehusseld")})});
+  on("#undoplan",undoPlan);
   on("#lock",()=>{S.locked=true;save();renderPlan();toast("Indeling vastgezet");window.scrollTo(0,0)});
   on("#copy",copyPlan);
   on("#gedopen",()=>{if(S.locked){toast("Haal eerst het slot eraf om te bewerken");return}const p=P();GED={grid:p.grid.map(r=>r.slice()),keepers:p.keepers.slice(),tool:"swap"};renderPlan();const w=$("#gedwrap");if(w)w.scrollIntoView({block:"start",behavior:"smooth"})});
@@ -937,7 +952,7 @@ function bindGridEdit(){const w=$("#gedwrap");if(!w)return;
     else{if(g[i][u]===2){toast("Dit is de keeper. Kies eerst een andere keeper met 🧤 Keeper maken.");return}g[i][u]=g[i][u]?0:1}
     redrawGridEdit()});
   const c=$("#gedcancel");if(c)c.onclick=()=>{GED=null;renderPlan()};
-  const sv=$("#gedsave");if(sv)sv.onclick=()=>{if(!gridEditCheck().ok)return;const p=P();p.grid=GED.grid;p.keepers=GED.keepers.slice();
+  const sv=$("#gedsave");if(sv)sv.onclick=()=>{if(!gridEditCheck().ok)return;snapPrev();const p=P();p.manual=true;p.grid=GED.grid;p.keepers=GED.keepers.slice();
     for(let q=0;q<Q;q++)if(S.keeperPick[q]&&S.keeperPick[q]!==p.keepers[q])S.keeperPick[q]=p.keepers[q];
     GED=null;save();renderPlan();toast("Indeling opgeslagen")}}
 function redrawGridEdit(){const w=$("#gedwrap");if(!w){renderPlan();return}const sx=(w.querySelector(".gridwrap")||{}).scrollLeft||0;w.innerHTML=gridEditHtml();const gw=w.querySelector(".gridwrap");if(gw)gw.scrollLeft=sx;bindGridEdit()}
@@ -962,7 +977,7 @@ function pickSwapScope(a,b,aOn,u){const e=nextBoundary(u),inPlan=view==="plan";
   $("#pswapl").innerHTML=`<button type="button" data-scope="next"><b>${inPlan?`Alleen ${clock(u*U)}–${clock(e*U)}`:e<N?`Tot de volgende wissel (${clock(e*U)})`:"Tot het einde"}</b><span class="note">Daarna gaat het schema gewoon verder</span></button>
     <button type="button" data-scope="rest"><b>${inPlan&&u>0?`Vanaf ${clock(u*U)} de rest van de wedstrijd`:inPlan?"De hele wedstrijd":"Rest van de wedstrijd"}</b><span class="note">${esc(nameOf(inn))} neemt het schema van ${esc(nameOf(out))} over en andersom</span></button>`;
   $("#pswapl").querySelectorAll("[data-scope]").forEach(x=>x.onclick=()=>{doPlayerSwap(a,b,x.dataset.scope,u);$("#pswap").hidden=true})}
-function doPlayerSwap(a,b,scope,u){const p=P(),ia=p.ids.indexOf(a),ib=p.ids.indexOf(b);if(ia<0||ib<0)return;
+function doPlayerSwap(a,b,scope,u){snapPrev();const p=P();p.manual=true;const ia=p.ids.indexOf(a),ib=p.ids.indexOf(b);if(ia<0||ib<0)return;
   const e=scope==="rest"?N:nextBoundary(u);
   for(let x=u;x<e;x++){const t=p.grid[ia][x];p.grid[ia][x]=p.grid[ib][x];p.grid[ib][x]=t}
   if(scope==="rest"){const sw=k=>k===a?b:k===b?a:k;for(let q=Math.floor(u/QU)+1;q<Q;q++){p.keepers[q]=sw(p.keepers[q]);if(S.keeperPick[q])S.keeperPick[q]=sw(S.keeperPick[q])}}
@@ -975,11 +990,13 @@ function openKeeperSwap(q){const p=P();if(!p)return;const cur=p.keepers[q];
     return `<button type="button" data-kto="${id}"><b>${esc(nameOf(id))}</b><span class="note">${st===1?"staat in het veld":"zit op de bank"}</span></button>`}).join("");
   $("#kswapl").querySelectorAll("[data-kto]").forEach(b=>b.onclick=()=>{swapKeeper(q,b.dataset.kto);m.hidden=true});
   m.hidden=false}
-function swapKeeper(q,newId){const p=P(),old=p.keepers[q],io=p.ids.indexOf(old),inew=p.ids.indexOf(newId);if(io<0||inew<0)return;
+function swapKeeper(q,newId){snapPrev();const p=P(),wasManual=!!p.manual,old=p.keepers[q],io=p.ids.indexOf(old),inew=p.ids.indexOf(newId);if(io<0||inew<0)return;
   for(let k=0;k<QU;k++){const u=q*QU+k;const t=p.grid[inew][u];p.grid[inew][u]=2;p.grid[io][u]=t===2?1:t}
   p.keepers[q]=newId;S.keeperPick[q]=newId;
+  const onlySwap=()=>{p.manual=true;save();renderPlan();toast(`${nameOf(newId)} keept kwart ${q+1}, ${nameOf(old)} neemt de plek van ${nameOf(newId)} over`)};
+  if(matchMs()===0&&wasManual){askConfirm(`${nameOf(newId)} keept kwart ${q+1}`,"Je hebt deze indeling zelf aangepast. Wil je de speeltijd opnieuw eerlijk laten verdelen, of alleen de keeper ruilen?","Speeltijd opnieuw verdelen",()=>{generate("players",true);renderPlan();toast("Speeltijd opnieuw verdeeld")},"Alleen keeper ruilen",onlySwap);return}
   if(matchMs()===0){ // wedstrijd nog niet begonnen: speeltijd opnieuw eerlijk verdelen, keepers blijven staan
-    generate("players");renderPlan();toast(`${nameOf(newId)} keept kwart ${q+1}. Speeltijd opnieuw eerlijk verdeeld.`);return}
+    generate("players",true);renderPlan();toast(`${nameOf(newId)} keept kwart ${q+1}. Speeltijd opnieuw eerlijk verdeeld.`);return}
   save();renderPlan();
   toast(`${nameOf(newId)} keept kwart ${q+1}, ${nameOf(old)} neemt de plek van ${nameOf(newId)} over`)}
 let BORROW={};
@@ -997,7 +1014,7 @@ function bindPlan(el){
   el.querySelectorAll("[data-kq]").forEach(x=>x.onchange=()=>{S.keeperPick[+x.dataset.kq]=x.value||null;save();x.blur();renderPlan()});
   el.querySelectorAll("[data-pq]").forEach(x=>x.onclick=()=>{const pl=S.players.find(y=>y.id===x.dataset.pq);
     if(pl.present&&S.keeperPick.includes(pl.id)){S.keeperPick=S.keeperPick.map(k=>k===pl.id?null:k);save()}setAtt(CUR,pl.id,!pl.present);});
-  const c=$("#calc");if(c)c.onclick=()=>{generate("all");renderPlan();toast("Indeling berekend");const s=$(".summary");s&&s.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})};
+  const c=$("#calc");if(c)c.onclick=()=>guardManual(()=>{generate("all");renderPlan();toast("Indeling berekend");const s=$(".summary");s&&s.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})});
 }
 function planText(){
   const p=P(),m=curMatch();let s=`⚽ ${DATA.team.name} · ${fmtDate(m.match_date)}${m.opponent?" · "+matchTitle(m):""}\n`;
